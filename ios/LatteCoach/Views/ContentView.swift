@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var practice: PracticeSession
     @EnvironmentObject private var store: CupStore
+    @EnvironmentObject private var sender: CupSenderBox
     @State private var capturing: Cup?
 
     var body: some View {
@@ -13,7 +14,9 @@ struct ContentView: View {
                     if store.cups.isEmpty {
                         Text("まだ杯がありません").foregroundStyle(.secondary)
                     }
-                    ForEach(store.cups) { cup in CupRow(cup: cup) }
+                    ForEach(store.cups) { cup in
+                        CupRow(cup: cup) { Task { await sender.sender.send(cup.id) } }
+                    }
                 }
             }
             .navigationTitle("スチームコーチ")
@@ -87,6 +90,7 @@ private struct LevelMeter: View {
 
 private struct CupRow: View {
     let cup: Cup
+    var onResend: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -108,6 +112,9 @@ private struct CupRow: View {
                 Text("スチーム区間が見つかりませんでした").font(.caption).foregroundStyle(.secondary)
             }
             if let e = cup.errorMessage { Text(e).font(.caption).foregroundStyle(.red) }
+            if cup.status == .failed || (cup.status == .ready && cup.photoFilename != nil) {
+                Button("送り直す", action: onResend).font(.caption).buttonStyle(.bordered)
+            }
         }
     }
 
