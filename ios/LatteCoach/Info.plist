@@ -22,8 +22,15 @@
 	<string>1</string>
 	<key>CoachServerURL</key>
 	<string>$(COACH_SERVER_URL)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>注ぎ終わったピッチャーの残りを1枚撮ります。</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>同じ Wi-Fi にある診断サーバーへ杯の特徴量と写真を送ります。</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>スチームの音から特徴量を計算します。音声そのものは保存も送信もしません。</string>
 	<key>NSPhotoLibraryUsageDescription</key>

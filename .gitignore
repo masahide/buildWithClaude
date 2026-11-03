@@ -19,3 +19,8 @@ DerivedData/
 
 # 個人の署名設定
 ios/Config/Local.xcconfig
+
+# サーバーの杯の記録
+server/data/
+server/.venv/
+__pycache__/

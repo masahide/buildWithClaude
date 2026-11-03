@@ -12,6 +12,37 @@
 
 iOS ネイティブアプリ＋薄いサーバー＋Claude Managed Agents。生の音声は端末から出さず、端末で計算した音響特徴量（スカラー値と相対値の包絡）とピッチャーの残りの写真だけを送る。詳細は [docs/project/architecture.md](docs/project/architecture.md)。
 
+## セットアップ
+
+必要なもの: Mac（Xcode 27 以降）、iPhone、[uv](https://docs.astral.sh/uv/)、[XcodeGen](https://github.com/yonaskolb/XcodeGen)、Anthropic の API キー。有償の Apple Developer Program は不要（[decisions.md D12](docs/project/decisions.md#d12-無料の-apple-id-で開発しリモートのプッシュ通知を使わない)）。
+
+### サーバー
+
+```sh
+cd server
+export ANTHROPIC_API_KEY=...        # コミットしない
+uv run uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+`COACH_BACKEND` で診断の方式を選ぶ。`messages`（既定）は Messages API を1回呼ぶ。`managed` は Managed Agents のセッションに Outcomes を付けて回す。`fake` は API を呼ばずに固定の診断を返すので、アプリとの通しの確認に使う。杯の記録は `server/data/`（git 管理外）に残る。
+
+### iOS アプリ
+
+```sh
+cd ios
+cp Config/Local.xcconfig.example Config/Local.xcconfig   # Team ID・バンドル ID・サーバー URL を書く
+xcodegen
+open LatteCoach.xcodeproj
+```
+
+サーバーの URL は、同じ Wi-Fi にある Mac を `http:/$()/<Mac の名前>.local:8000` の形で書く（xcconfig では `//` がコメントになるため）。
+
+### 診断の待ち時間の計測
+
+```sh
+uv run scripts/latency/measure.py ピッチャーの写真.jpg --mode managed --mode messages
+```
+
 ## ドキュメント
 
 | ドキュメント | 内容 |

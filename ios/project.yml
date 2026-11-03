@@ -33,6 +33,10 @@ targets:
         NSCameraUsageDescription: 注ぎ終わったピッチャーの残りを1枚撮ります。
         NSPhotoLibraryUsageDescription: 撮影済みのピッチャーの写真を選ぶときに使います。
         CoachServerURL: $(COACH_SERVER_URL)
+        # 開発中は同じ Wi-Fi の Mac で動くサーバーに http で送る（ローカルネットワークだけ許可）
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: 同じ Wi-Fi にある診断サーバーへ杯の特徴量と写真を送ります。
   LatteCoachTests:
     type: bundle.unit-test
     platform: iOS
