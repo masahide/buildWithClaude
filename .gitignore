@@ -1,0 +1,11 @@
+# 非公開メモ（クレジット・アカウント情報、キックオフ文字起こしの原文など）
+notes/private/
+
+# 秘密情報
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
