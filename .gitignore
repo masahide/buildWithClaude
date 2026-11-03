@@ -9,3 +9,10 @@ notes/private/
 # OS
 .DS_Store
 Thumbs.db
+scripts/latency/.ids.json
+scripts/latency/results/
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
