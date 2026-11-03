@@ -47,6 +47,7 @@ uv run scripts/latency/measure.py ピッチャーの写真.jpg --mode managed --
 
 | ドキュメント | 内容 |
 | --- | --- |
+| [docs/project/status.md](docs/project/status.md) | 現在の状態と次にやること（引き継ぎ用） |
 | [docs/project/overview.md](docs/project/overview.md) | プロダクト概要、誰が何に困っているか、設計原則、工程の区分、ユーザー操作 |
 | [docs/project/architecture.md](docs/project/architecture.md) | 全体構成、iOS アプリ、サーバー、Managed Agents |
 | [docs/project/decisions.md](docs/project/decisions.md) | 設計判断の記録と未決事項 |

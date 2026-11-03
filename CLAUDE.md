@@ -2,6 +2,8 @@
 
 ラテアートAIコーチ（Built with Claude: Japan 2026 応募作品）のリポジトリ。プロダクトの全体像は [README.md](README.md) と [docs/project/](docs/project/) を読むこと。
 
+**作業を始める前に [docs/project/status.md](docs/project/status.md)（現在の状態と次にやること）を読むこと。** 区切りがついたら更新する。
+
 ## 必ず守ること
 
 - **提出期限は 2026-11-08 20:00 JST。** 優先度はこの期限から逆算する（[docs/project/plan.md](docs/project/plan.md)）
