@@ -16,3 +16,6 @@ scripts/latency/results/
 xcuserdata/
 DerivedData/
 *.xcuserstate
+
+# 個人の署名設定
+ios/Config/Local.xcconfig

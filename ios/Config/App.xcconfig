@@ -1,0 +1,7 @@
+// 共通の設定。個人の値は Local.xcconfig（git 管理外）で上書きする。雛形は Local.xcconfig.example
+APP_BUNDLE_ID = com.example.lattecoach.app
+DEVELOPMENT_TEAM =
+// 診断サーバーの URL。空なら杯は端末に保存するだけ
+COACH_SERVER_URL =
+
+#include? "Local.xcconfig"

@@ -1,0 +1,6 @@
+// Local.xcconfig にコピーして自分の値を入れる（git 管理外。公開リポジトリに入れない）
+// Team ID は Xcode > Settings > Accounts の Personal Team などで確認できる
+DEVELOPMENT_TEAM = XXXXXXXXXX
+APP_BUNDLE_ID = com.yourname.lattecoach.app
+// xcconfig では // がコメントになるため、URL は http:/$()/ のように書く
+// COACH_SERVER_URL = http:/$()/192.168.1.10:8000

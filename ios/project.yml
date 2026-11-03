@@ -8,20 +8,20 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    # 署名チームは各自の Xcode で設定する（公開リポジトリに入れない）
-    DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 targets:
   LatteCoach:
     type: application
     platform: iOS
     sources: [LatteCoach]
+    # 署名チーム・バンドル ID・サーバー URL は Config/Local.xcconfig（git 管理外）で設定する
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.lattecoach.app
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
         TARGETED_DEVICE_FAMILY: "1"
-        # 診断サーバーの URL。未設定なら杯は端末に保存するだけ
-        COACH_SERVER_URL: ""
     info:
       path: LatteCoach/Info.plist
       properties:
@@ -37,6 +37,13 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources: [LatteCoachTests]
+    configFiles:
+      Debug: Config/App.xcconfig
+      Release: Config/App.xcconfig
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID).tests
     dependencies:
       - target: LatteCoach
 schemes:

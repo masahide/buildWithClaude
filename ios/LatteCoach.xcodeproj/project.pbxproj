@@ -47,6 +47,7 @@
 		95483A7884EE2C8FF6C21E58 /* LatteCoach.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LatteCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B117DEC7A60790DBA70A2303 /* LatteCoachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatteCoachApp.swift; sourceTree = "<group>"; };
 		C3BCDDED5695DEDC1A0C43FC /* FeatureExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractor.swift; sourceTree = "<group>"; };
+		C4FE27B71521694510D565D9 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		D3225C3A254CE3CF737B0190 /* Cup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cup.swift; sourceTree = "<group>"; };
 		D48A1FB9D9BBC489C636B7FE /* CupCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CupCaptureView.swift; sourceTree = "<group>"; };
 		DABB90288C9246A9DFE8FB21 /* AudioCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCapture.swift; sourceTree = "<group>"; };
@@ -61,6 +62,14 @@
 				77E8B436523D4A695283459A /* SyntheticSteam.swift */,
 			);
 			path = LatteCoachTests;
+			sourceTree = "<group>";
+		};
+		26125A82E8EF53025C06202D /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C4FE27B71521694510D565D9 /* App.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		27B5D9397CE152A18BF61FD1 /* Model */ = {
@@ -93,6 +102,7 @@
 		4BAF31A9795B482EF082EC2F = {
 			isa = PBXGroup;
 			children = (
+				26125A82E8EF53025C06202D /* Config */,
 				FCE4B6B39EBC15584EC87E5D /* LatteCoach */,
 				1588C9F2057083C76363FA3A /* LatteCoachTests */,
 				5BA12875B8DD160123212B6F /* Products */,
@@ -260,14 +270,16 @@
 /* Begin XCBuildConfiguration section */
 		2303CAD8CE7393F5513D7F64 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C4FE27B71521694510D565D9 /* App.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.lattecoach.LatteCoachTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).tests";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LatteCoach.app/LatteCoach";
@@ -276,16 +288,16 @@
 		};
 		3E55FDA2AA10B814A6E5D2BF /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C4FE27B71521694510D565D9 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				COACH_SERVER_URL = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = LatteCoach/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.lattecoach.app;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -327,7 +339,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -392,7 +403,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -416,14 +426,16 @@
 		};
 		B3463F916D89AD3146335D12 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C4FE27B71521694510D565D9 /* App.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.lattecoach.LatteCoachTests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).tests";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LatteCoach.app/LatteCoach";
@@ -432,16 +444,16 @@
 		};
 		E3B8E6CD08AF8FF513B5B379 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C4FE27B71521694510D565D9 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				COACH_SERVER_URL = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = LatteCoach/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.lattecoach.app;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
