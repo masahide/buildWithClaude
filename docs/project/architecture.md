@@ -85,7 +85,7 @@ iPhoneアプリ ──特徴量+写真──> 薄いサーバー ──セッシ
 - 前の杯に予測があれば、その当否を述べている
 - `/tendencies.md` と過去の杯の記録に矛盾しない。矛盾する場合はその理由を述べる
 
-診断の待ち時間によっては、1杯ごとの診断を Messages API に切り替える可能性がある（[plan.md](plan.md#今日11-03確かめること) の確認項目2）。
+待ち時間を測った結果、1杯ごとの診断は Managed Agents＋Outcomes で回す（送ってから約1〜2分。[decisions.md D13](decisions.md#d13-1杯ごとの診断を-managed-agentsoutcomes-で回す)）。2分を超えるようなら、サーバーの設定で Messages API に戻す。
 
 ### 夜の振り返り（スケジュール実行）
 
