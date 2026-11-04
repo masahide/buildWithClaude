@@ -23,8 +23,9 @@ struct CoachClient {
         let endedAt: Date
         let features: CupFeatures?
         let selfRating: String?
+        let envelope: [[Float]]?
         enum CodingKeys: String, CodingKey {
-            case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating"
+            case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating", envelope
         }
     }
 
@@ -46,13 +47,15 @@ struct CoachClient {
             body.append("\r\n".data(using: .utf8)!)
         }
         let meta = Meta(startedAt: cup.startedAt, endedAt: cup.endedAt, features: cup.features,
-                        selfRating: cup.selfRating?.rawValue)
+                        selfRating: cup.selfRating?.rawValue, envelope: cup.envelope)
         part("meta", type: "application/json", data: try JSONEncoder.iso.encode(meta))
         if let photo { part("photo", filename: "pitcher.jpg", type: "image/jpeg", data: photo) }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         var req = URLRequest(url: baseURL.appendingPathComponent("cups"))
         req.httpMethod = "POST"
+        // サーバーが止まっているときに「送信中」で長く待たせない
+        req.timeoutInterval = 30
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         let (data, response) = try await URLSession.shared.upload(for: req, from: body)
         try Self.check(response, data)

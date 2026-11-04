@@ -26,6 +26,26 @@ final class CupSender {
         }
     }
 
+    /// 起動時に、途中で止まった杯を立て直す。送信中のまま止まった杯は送り直せるようにし、
+    /// サーバーが受け取り済みで診断中の杯は結果の取得を再開する
+    func resumePending() async {
+        for cup in store.cups {
+            switch cup.status {
+            case .sending:
+                store.update(cup.id) { $0.status = .failed; $0.errorMessage = "送信が途中で止まりました。送り直してください" }
+            case .diagnosing:
+                guard let client = CoachClient.fromBundle(), let serverId = cup.serverId else { continue }
+                do {
+                    try await poll(client: client, id: cup.id, serverId: serverId)
+                } catch {
+                    store.update(cup.id) { $0.status = .failed; $0.errorMessage = error.localizedDescription }
+                }
+            default:
+                continue
+            }
+        }
+    }
+
     private func poll(client: CoachClient, id: UUID, serverId: String) async throws {
         let clock = ContinuousClock()
         let deadline = clock.now + timeout

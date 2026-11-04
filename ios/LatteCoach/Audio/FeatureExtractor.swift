@@ -99,14 +99,15 @@ final class BandAnalyzer {
 
 /// 閾値。家庭の録音で調整する前提の暫定値。
 struct FeatureThresholds {
-    /// 背景音の何倍をスチームとみなすか（6 で約 +8 dB）
-    var steamOverBackground: Float = 6
-    /// この秒数より短い途切れはスチーム区間に統合する（空ぶかしなど）
-    var mergeGapSec: Double = 1.5
+    /// 背景音の何倍をスチームとみなすか（3 で約 +5 dB）。
+    /// 6 では渦の静かな撹拌相が閾値を割り、40〜60 秒のスチームが 14〜19 秒に切れた（log/2026-11-04）
+    var steamOverBackground: Float = 3
+    /// この秒数より短い途切れはスチーム区間に統合する
+    var mergeGapSec: Double = 4
     /// この秒数に満たない区間は弾く（グラインダー、ケトルなど）
     var minSteamSec: Double = 8
     /// スチーム後、この秒数静かならスチーム終了とみなす（通知用）
-    var endSilenceSec: Double = 2
+    var endSilenceSec: Double = 4
     /// 撹拌相の中央値の何倍を破裂音とみなすか
     var burstOverMedian: Float = 1.8
 }

@@ -70,7 +70,11 @@ final class PracticeSession: ObservableObject {
     /// 今の杯を区切り、特徴量を計算して返す。区間が見つからなければ features は nil。
     func cutCup() -> Cup {
         let features = FeatureExtractor.extract(frames: frames, background: background)
-        let cup = Cup(startedAt: cupStartedAt, endedAt: Date(), features: features)
+        var cup = Cup(startedAt: cupStartedAt, endedAt: Date(), features: features)
+        let bg = max(background, 1e-12)
+        // 有効数字3桁に丸めて送信量を抑える
+        func r(_ v: Float) -> Float { v == 0 ? 0 : Float(String(format: "%.3g", v / bg)) ?? v / bg }
+        cup.envelope = frames.map { [r($0.low), r($0.mid), r($0.high)] }
         frames = []
         endDetector.reset()
         steamDetected = false

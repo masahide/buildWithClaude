@@ -36,6 +36,9 @@ struct Cup: Codable, Identifiable, Equatable {
     var endedAt: Date
     /// スチーム区間が見つからなかった杯は nil（写真だけ送る）
     var features: CupFeatures?
+    /// 区切りまでの帯域エネルギーの包絡（背景音比、0.1 秒ごとの [低, 中, 高]）。
+    /// 音声ではなく、会話は復元できない（decisions.md D6）。閾値の調整のためにサーバーへ送る
+    var envelope: [[Float]]?
     var selfRating: SelfRating?
     var photoFilename: String?
     var status: Status = .awaitingPhoto

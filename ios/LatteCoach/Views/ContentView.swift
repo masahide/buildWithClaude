@@ -21,6 +21,7 @@ struct ContentView: View {
             }
             .navigationTitle("スチームコーチ")
             .sheet(item: $capturing) { cup in CupCaptureView(cup: cup) }
+            .task { await sender.sender.resumePending() }
             .alert("エラー", isPresented: Binding(get: { practice.errorMessage != nil },
                                                 set: { if !$0 { practice.errorMessage = nil } })) {
                 Button("OK", role: .cancel) {}
