@@ -8,14 +8,15 @@
 
 **11-05 の夜までに「録る → 送る → 診断がアプリに表示される」の一周を、手動区切りで回す**（[decisions.md D11](decisions.md#d11-最初の一周は手動区切りで回し自動区切りと包絡を後回しにする)）。残りの日はデモ素材の撮影と検証データに充てる。
 
-## できていること（2026-11-03）
+## できていること（2026-11-04 時点）
 
 | 項目 | 状態 |
 | --- | --- |
-| iOS アプリ（`ios/`） | 実機（iPhone 15 Pro Max）で起動。録音、背景音の測定、特徴量、「この杯を区切って撮る」、スチーム終了の通知、写真、送信、結果の表示、送り直し |
-| 特徴量のテスト | シミュレーターで5本通過（合成音）。実際のスチーム音ではまだ試していない |
-| サーバー（`server/`） | FastAPI。iPhone から Wi-Fi で送った杯に、Managed Agents＋Outcomes の本物の診断が返り、アプリに表示される（ダミーの杯2杯で確認） |
-| 診断の方式 | Managed Agents＋Outcomes に決めた（D13）。送ってから約1〜2分（68 / 101 / 190 秒）。Messages API は約15秒で、`COACH_BACKEND=messages` で戻せる |
+| iOS アプリ（`ios/`） | 実機（iPhone 15 Pro Max）で起動。録音、背景音の測定、特徴量、「この杯を区切って撮る」、スチーム終了の通知、写真、送信、結果の表示、送り直し。11-04 の版で、検出をゆるめ、包絡を送り、起動時に止まった杯を立て直す（実機に入れ済み） |
+| 特徴量 | 合成音のテスト5本は通過。実際のスチーム（11-04 朝の2杯）では、40〜60 秒のスチームを 14〜19 秒しか拾えず、撹拌の安定度も 0 に張り付いた。相の判定は作り直しが必要（次にやることの1） |
+| サーバー（`server/`） | FastAPI。iPhone から Wi-Fi で送った杯に、Managed Agents＋Outcomes の本物の診断が返り、アプリに表示される。実際のスチームの2杯で一周した。昨夜のダミーの杯は `server/data/dummy/` に移してあり、前の杯の比較には使われない |
+| 予測の検証（D7） | 実際の杯で初めて回った。2杯目が1杯目の予測（ゴボゴボが減る）を「当たり」と判定し、他の条件も変わったので直し方だけの効果とは言い切れない、と断った |
+| 診断の方式 | Managed Agents＋Outcomes に決めた（D13）。送ってから約1〜2分（計測 68 秒、ダミー 101 / 190 秒、実際の杯 104 / 127 秒）。2分を少し超える杯があるので、もう数杯見て判断する。Messages API は約15秒で、`COACH_BACKEND=messages` で戻せる |
 | API キー | `~/.config/latte-coach/env` にある（`ANTHROPIC_API_KEY=...` の1行、git 管理外）。使うときは `set -a; . ~/.config/latte-coach/env; set +a` で読み込む。値を表示しない |
 | Dreaming | 申請済み・承認待ち。計画は承認がない前提で進める |
 
@@ -34,7 +35,7 @@
 ## 環境の注意（この Mac）
 
 - 開発は Mac だけで行う。Windows では編集しない（D11）
-- **署名には Mac のログインキーチェーンの解錠が要る。** SSH 経由のシェルからだと `errSecInternalComponent` で署名に失敗する。本人に `! security unlock-keychain ~/Library/Keychains/login.keychain-db` を実行してもらう（パスワードは本人が入れる。受け取らない）。再起動するとまたロックされる
+- **署名には Mac のログインキーチェーンの解錠が要る。** SSH 経由のシェルからだと `errSecInternalComponent` で署名に失敗する。本人に **Claude Code の入力欄から** `! security unlock-keychain ~/Library/Keychains/login.keychain-db` を実行してもらう（パスワードは本人が入れる。受け取らない）。Mac の「ターミナル」アプリやキーチェーンアクセスで解錠しても、SSH 側のセッションには効かない。解錠できたかは `security show-keychain-info ~/Library/Keychains/login.keychain-db` で確かめる（`no-timeout` と出れば解錠済み）。再起動するとまたロックされる
 - 無料の Apple ID（Personal Team）で署名している。アプリは7日ごとに入れ直しが要る（D12）
 - 署名チーム・バンドル ID・サーバー URL は `ios/Config/Local.xcconfig`（git 管理外、この Mac にだけある）。プロジェクトを変えたら `cd ios && xcodegen` で作り直す
 - iPhone への入れ直し（端末の ID は `xcrun devicectl list devices` で確かめる）:
@@ -46,6 +47,7 @@
   xcrun devicectl device process launch --terminate-existing --device <端末ID> <バンドル ID>
   ```
   iPhone がロック中だと起動だけ失敗する。本人に解除してもらう
+- **サーバーは Claude Code のセッションを閉じると止まる。** 11-04 の朝は止まっていて、アプリの送信が時間切れになった。練習の前に起動しているか確かめる（`curl -s localhost:8000/health`）
 - サーバーの起動: `cd server && set -a && . ~/.config/latte-coach/env && set +a && COACH_BACKEND=managed uv run uvicorn app:app --host 0.0.0.0 --port 8000`。API を呼ばずに通しを確かめるときは `COACH_BACKEND=fake`。Managed Agents のエージェントと環境の ID は `server/data/managed_ids.json`（git 管理外）に保存され、使い回される。iPhone と Mac は同じ Wi-Fi に置く。Mac がスリープすると届かない
 - iOS の初回送信は、ローカルネットワークの許可が出るまで「Could not connect to the server.」で失敗する。設定 → プライバシーとセキュリティ → ローカルネットワークで許可する
 - アプリの記録は iPhone から読み出せる: `xcrun devicectl device copy from --device <端末ID> --domain-type appDataContainer --domain-identifier <バンドル ID> --source Documents/Cups/cups.json --destination <保存先>`
