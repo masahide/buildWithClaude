@@ -24,7 +24,7 @@ export ANTHROPIC_API_KEY=...        # コミットしない
 uv run uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-`COACH_BACKEND` で診断の方式を選ぶ。`messages`（既定）は Messages API を1回呼ぶ。`managed` は Managed Agents のセッションに Outcomes を付けて回す。`fake` は API を呼ばずに固定の診断を返すので、アプリとの通しの確認に使う。杯の記録は `server/data/`（git 管理外）に残る。
+`COACH_BACKEND` で診断の方式を選ぶ。`managed`（既定）は Managed Agents のセッションに Outcomes を付けて回す。`messages` は Messages API を1回呼ぶ（速いが採点役がない）。`fake` は API を呼ばずに固定の診断を返すので、アプリとの通しの確認に使う。杯の記録は `server/data/`（git 管理外）に残る。
 
 ### iOS アプリ
 

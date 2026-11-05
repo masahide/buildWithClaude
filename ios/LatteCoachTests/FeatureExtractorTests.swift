@@ -1,38 +1,46 @@
 import XCTest
 @testable import LatteCoach
 
-/// 合成音で特徴量の向きを確かめる。値そのものではなく「エア入れが長い杯ほど比率が大きい」などの順序を見る。
+/// 合成音で特徴量の向きを確かめる。値そのものより「泡入れが長い杯ほど比率が大きい」などの順序を見る。
+/// 実際の録音での値は log/2026-11-05 を参照
 final class FeatureExtractorTests: XCTestCase {
-    func testDetectsSteamAndAirPhase() throws {
-        let result = try XCTUnwrap(SyntheticSteam.run(airSec: 8, stirSec: 20, bursts: 0))
-        XCTAssertEqual(result.steamDurationSec, 28, accuracy: 1.5)
-        XCTAssertEqual(result.airPhaseRatio, 8.0 / 28.0, accuracy: 0.08)
+    func testDetectsSteamAndPhases() throws {
+        // キュルルル 4 秒 + 泡入れ 13 秒 + 渦 30 秒 + 終わりのキュルキュル 2 秒 = 49 秒
+        let result = try XCTUnwrap(SyntheticSteam.run(squealSec: 4, airSec: 13, stirSec: 30, bursts: 0))
+        XCTAssertEqual(result.steamDurationSec, 49, accuracy: 2)
+        XCTAssertEqual(result.startSquealSec, 4, accuracy: 1)
+        XCTAssertEqual(result.airPhaseRatio, 13.0 / 49.0, accuracy: 0.08)
         XCTAssertEqual(result.burstCount, 0)
     }
 
+    func testPurgeIsNotSteam() throws {
+        // 空だし（1 秒）は区間に含めない。区間は空だしの後に始まる
+        let result = try XCTUnwrap(SyntheticSteam.run(squealSec: 4, airSec: 13, stirSec: 30, bursts: 0))
+        XCTAssertLessThan(result.steamDurationSec, 52)
+        XCTAssertNil(SyntheticSteam.run(airSec: 0, stirSec: 0, bursts: 0, purgeOnly: true))
+    }
+
     func testLongerAirPhaseGivesLargerRatio() throws {
-        let short = try XCTUnwrap(SyntheticSteam.run(airSec: 4, stirSec: 20, bursts: 0))
-        let long = try XCTUnwrap(SyntheticSteam.run(airSec: 12, stirSec: 20, bursts: 0))
+        let short = try XCTUnwrap(SyntheticSteam.run(airSec: 6, stirSec: 30, bursts: 0))
+        let long = try XCTUnwrap(SyntheticSteam.run(airSec: 18, stirSec: 30, bursts: 0))
         XCTAssertGreaterThan(long.airPhaseRatio, short.airPhaseRatio + 0.1)
     }
 
     func testCountsBursts() throws {
-        let result = try XCTUnwrap(SyntheticSteam.run(airSec: 6, stirSec: 20, bursts: 5))
+        let result = try XCTUnwrap(SyntheticSteam.run(airSec: 13, stirSec: 30, bursts: 5))
         XCTAssertEqual(result.burstCount, 5)
     }
 
-    func testIgnoresShortNoise() {
-        // 3 秒のグラインダー相当は弾く
-        XCTAssertNil(SyntheticSteam.run(airSec: 3, stirSec: 0, bursts: 0))
-    }
-
-    func testSteamEndDetectorFiresOnce() {
+    func testSteamEndDetectorFiresOnceAfterSteam() {
+        let frames = SyntheticSteam.frames(squealSec: 4, airSec: 13, stirSec: 30, bursts: 0)
+        let bg = SyntheticSteam.background(frames)
         var detector = SteamEndDetector()
-        let loud = BandFrame(low: 1, mid: 1, high: 1)
-        let quiet = BandFrame(low: 0.01, mid: 0.01, high: 0.01)
-        var fired = 0
-        for _ in 0..<150 { if detector.feed(loud, background: 0.03) { fired += 1 } }
-        for _ in 0..<100 { if detector.feed(quiet, background: 0.03) { fired += 1 } }
-        XCTAssertEqual(fired, 1)
+        var firedAt: [Int] = []
+        for (i, f) in frames.enumerated() where detector.feed(f, background: bg) { firedAt.append(i) }
+        XCTAssertEqual(firedAt.count, 1)
+        // スチームが止まる（3 + 1 + 5 + 49 = 58 秒）より後、静かになって数秒以内
+        if let at = firedAt.first {
+            XCTAssertEqual(Double(at) / 10, 60, accuracy: 2.5)
+        }
     }
 }

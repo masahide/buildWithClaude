@@ -1,14 +1,15 @@
 """コーチ本体の呼び出し。1杯ぶんの特徴量と写真から、原因の工程1つ・直す点1つ・予測1つを返す。
 
 方式は環境変数 COACH_BACKEND で切り替える（どちらにするかは待ち時間の計測で決める。decisions.md 未決）。
-  messages : Messages API を1回呼ぶ（既定）
-  managed  : Managed Agents のセッション＋Outcomes（採点役が差し戻す）
+  managed  : Managed Agents のセッション＋Outcomes（採点役が差し戻す。既定。decisions.md D13）
+  messages : Messages API を1回呼ぶ（待ち時間が長すぎるときの戻し先）
   fake     : API を呼ばず固定の診断を返す（アプリとの通し確認用）
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -35,15 +36,19 @@ SYSTEM = """あなたは家庭でラテアートを練習する人のための�
 - 写真の所見は「泡の大きさ」「泡の固さ」「艶」を各 0〜2 で数値化する
 - 音で分からないもの（渦の回転方向、縦横の撹拌のバランス、ノズルの正確な位置と深さ）は観測したかのように書かない
 
+この人のスチームの音の並び: 蒸気を出した直後の甲高い「キュルルル」→ 泡入れの「ジュルジュル」（音量が細かく上下する）
+→ 渦に入って静かで滑らかな撹拌 → 止める間際の「キュルキュル」。前後の空だしはスチーム区間に含めない。
+
 特徴量の意味:
-- steam_duration_sec: スチーム区間の長さ（秒）
-- air_phase_ratio: スチーム区間のうち「紙を裂く音」（高域が強い）が続いた割合
-- transition_at: エア入れ相から撹拌相へ移った位置（区間の先頭からの割合）
-- stir_stability: 撹拌相の音の安定度（1 に近いほど安定）
+- steam_duration_sec: スチーム区間の長さ（秒）。蒸気を出してから止めるまで
+- start_squeal_sec: 始めの「キュルルル」の長さ（秒）
+- air_phase_ratio: スチーム区間のうち、泡入れ（ジュルジュル）が占める割合。始めのキュルルルは含まない
+- transition_at: 泡入れから渦（撹拌）へ移った位置（区間の先頭からの割合）
+- stir_stability: 撹拌相の音の滑らかさ（1 に近いほど滑らか。渦が安定している）
 - stir_low_band_ratio: 撹拌相の低域の割合。高いとノズルが深すぎる疑い
-- burst_count: 撹拌相の大きな泡の破裂音（ゴボゴボ）の回数。多いと渦ができていない疑い
+- burst_count: 撹拌相で中域が急に大きくなった回数（ゴボゴボ）。多いと渦ができていない疑い
 - level_over_background_db: 背景音に対する音量。置き場所の目安で、診断の根拠にはしない
-閾値は家庭の録音で調整中の暫定値なので、数値は杯どうしの比較として読むこと。
+判定は本人の録音1本で合わせた暫定値なので、数値は杯どうしの比較として読むこと。11-04 以前の杯は判定の方法が違うため、数値を直接比べない。
 """
 
 RUBRIC = """# 1杯の診断のルーブリック
@@ -110,7 +115,7 @@ def _user_content(features: Optional[dict], self_rating: Optional[str], photo: O
 
 def diagnose(features: Optional[dict], self_rating: Optional[str], photo: Optional[bytes],
              previous: Optional[dict]) -> Diagnosis:
-    backend = os.environ.get("COACH_BACKEND", "messages")
+    backend = os.environ.get("COACH_BACKEND", "managed")
     content = _user_content(features, self_rating, photo, previous)
     if backend == "managed":
         return _diagnose_managed(content)
@@ -157,7 +162,14 @@ MANAGED_SYSTEM = SYSTEM + """
 
 def _managed_ids(client: anthropic.Anthropic) -> dict:
     if MANAGED_IDS.exists():
-        return json.loads(MANAGED_IDS.read_text())
+        ids = json.loads(MANAGED_IDS.read_text())
+        # プロンプトを変えたら、保存してあるエージェントを新しい版に更新する
+        digest = hashlib.sha256(MANAGED_SYSTEM.encode()).hexdigest()
+        if ids.get("system_sha256") != digest:
+            agent = client.beta.agents.update(ids["agent_id"], version=ids["agent_version"], system=MANAGED_SYSTEM)
+            ids.update(agent_version=agent.version, system_sha256=digest)
+            MANAGED_IDS.write_text(json.dumps(ids, indent=2))
+        return ids
     env = client.beta.environments.create(
         name="latte-coach", config={"type": "cloud", "networking": {"type": "limited"}}
     )
@@ -171,7 +183,8 @@ def _managed_ids(client: anthropic.Anthropic) -> dict:
             "configs": [{"name": "web_fetch", "enabled": False}, {"name": "web_search", "enabled": False}],
         }],
     )
-    ids = {"agent_id": agent.id, "agent_version": agent.version, "environment_id": env.id}
+    ids = {"agent_id": agent.id, "agent_version": agent.version, "environment_id": env.id,
+           "system_sha256": hashlib.sha256(MANAGED_SYSTEM.encode()).hexdigest()}
     MANAGED_IDS.parent.mkdir(parents=True, exist_ok=True)
     MANAGED_IDS.write_text(json.dumps(ids, indent=2))
     return ids

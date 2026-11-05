@@ -1,53 +1,72 @@
 import Foundation
 @testable import LatteCoach
 
-/// テスト用の合成スチーム音。背景3秒 → エア入れ（高域のノイズ）→ 撹拌（低中域）→ 無音2秒。
+/// テスト用の合成スチーム音。実際の録音（log/2026-11-05）の並びをまねる:
+/// 背景3秒 → 空だし1秒 → 物音5秒 → 始めのキュルルル（3.5 kHz の甲高い音）→ 泡入れ（音量が細かく上下する雑音）
+/// → 渦（背景より数 dB 大きいだけの滑らかな雑音。bursts 回だけ中域の破裂）→ 終わりのキュルキュル（1.3 kHz）→ 無音3秒
 enum SyntheticSteam {
     static let sampleRate = 48_000.0
 
-    static func run(airSec: Double, stirSec: Double, bursts: Int) -> CupFeatures? {
+    static func frames(squealSec: Double, airSec: Double, stirSec: Double, bursts: Int, purgeOnly: Bool = false) -> [BandFrame] {
         var rng = SeededRandom(seed: 42)
         var samples: [Float] = []
         samples += noise(sec: 3, amp: 0.002, rng: &rng)
-        samples += highHiss(sec: airSec, rng: &rng)
-        samples += stir(sec: stirSec, bursts: bursts, rng: &rng)
-        samples += noise(sec: 2, amp: 0.002, rng: &rng)
+        samples += noise(sec: 1, amp: 0.3, rng: &rng)           // 空だし
+        samples += noise(sec: 5, amp: 0.0025, rng: &rng)        // 物音
+        if !purgeOnly {
+            samples += tone(sec: squealSec, hz: 3500, amp: 0.3, floor: 0.002, rng: &rng)
+            samples += aeration(sec: airSec, rng: &rng)
+            samples += stir(sec: stirSec, bursts: bursts, rng: &rng)
+            samples += tone(sec: 2, hz: 1300, amp: 0.05, floor: 0.0032, rng: &rng)
+        }
+        samples += noise(sec: 3, amp: 0.001, rng: &rng)
+        return BandAnalyzer(sampleRate: sampleRate).append(samples)
+    }
 
-        let analyzer = BandAnalyzer(sampleRate: sampleRate)
-        let frames = analyzer.append(samples)
-        let backgroundFrames = Array(frames.prefix(30))
-        let background = backgroundFrames.map(\.total).sorted()[backgroundFrames.count / 2]
-        return FeatureExtractor.extract(frames: frames, background: background)
+    /// 背景音はアプリと同じく、先頭3秒の中央値
+    static func background(_ frames: [BandFrame]) -> Float {
+        let head = frames.prefix(30).map(\.total).sorted()
+        return head[head.count / 2]
+    }
+
+    static func run(squealSec: Double = 4, airSec: Double, stirSec: Double, bursts: Int, purgeOnly: Bool = false) -> CupFeatures? {
+        let f = frames(squealSec: squealSec, airSec: airSec, stirSec: stirSec, bursts: bursts, purgeOnly: purgeOnly)
+        return FeatureExtractor.extract(frames: f, background: background(f))
     }
 
     private static func noise(sec: Double, amp: Float, rng: inout SeededRandom) -> [Float] {
         (0..<Int(sec * sampleRate)).map { _ in amp * rng.nextSigned() }
     }
 
-    /// 白色雑音を一次差分して高域を強調する（紙を裂く音の代わり）
-    private static func highHiss(sec: Double, rng: inout SeededRandom) -> [Float] {
-        var prev: Float = 0
-        return (0..<Int(sec * sampleRate)).map { _ in
-            let x = 0.3 * rng.nextSigned()
-            defer { prev = x }
-            return x - prev
+    private static func tone(sec: Double, hz: Double, amp: Float, floor: Float, rng: inout SeededRandom) -> [Float] {
+        (0..<Int(sec * sampleRate)).map { i in
+            amp * Float(sin(2 * .pi * hz * Double(i) / sampleRate)) + floor * rng.nextSigned()
         }
     }
 
-    /// 低域の正弦波＋弱い雑音（渦の静かな轟音の代わり）。bursts 回だけ 0.2 秒の中域の破裂を入れる
+    /// 0.1〜0.3 秒ごとに音量が大きく変わる雑音（ジュルジュル）
+    private static func aeration(sec: Double, rng: inout SeededRandom) -> [Float] {
+        let n = Int(sec * sampleRate)
+        var out: [Float] = []
+        out.reserveCapacity(n)
+        while out.count < n {
+            let len = Int((0.1 + 0.2 * Double(abs(rng.nextSigned()))) * sampleRate)
+            let amp: Float = 0.02 + 0.2 * abs(rng.nextSigned())
+            for _ in 0..<min(len, n - out.count) { out.append(amp * rng.nextSigned()) }
+        }
+        return out
+    }
+
+    /// 背景より約 +4 dB の滑らかな雑音（渦）。bursts 回だけ 0.2 秒の中域の破裂（実際の録音と同じく +10 dB ほど）を入れる
     private static func stir(sec: Double, bursts: Int, rng: inout SeededRandom) -> [Float] {
         let n = Int(sec * sampleRate)
-        var out = (0..<n).map { i -> Float in
-            let t = Double(i) / sampleRate
-            return Float(0.15 * sin(2 * .pi * 180 * t)) + 0.01 * rng.nextSigned()
-        }
+        var out = (0..<n).map { _ in 0.0032 * rng.nextSigned() }
         guard bursts > 0 else { return out }
         let burstLen = Int(0.2 * sampleRate)
         for b in 0..<bursts {
             let start = n * (b + 1) / (bursts + 1)
             for i in start..<min(n, start + burstLen) {
-                let t = Double(i) / sampleRate
-                out[i] += Float(0.6 * sin(2 * .pi * 900 * t))
+                out[i] += Float(0.012 * sin(2 * .pi * 900 * Double(i) / sampleRate))
             }
         }
         return out
