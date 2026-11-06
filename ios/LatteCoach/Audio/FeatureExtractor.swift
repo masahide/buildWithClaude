@@ -19,9 +19,15 @@ struct CupFeatures: Codable, Equatable {
     var steamDurationSec: Double
     /// 始めの「キュルルル」の長さ（秒）
     var startSquealSec: Double
-    /// スチーム区間のうち、泡入れ（ジュルジュル）が占める割合（0〜1）。始めのキュルルルは含まない
+    /// スチーム区間のうち、泡入れ（ジュルジュル）が占める割合（0〜1）。追加の泡入れも含み、始めのキュルルルは含まない
     var airPhaseRatio: Double
-    /// 泡入れから渦（撹拌）へ移った位置（区間の先頭からの割合 0〜1）
+    /// 最初の泡入れの長さ（秒）
+    var firstAirSec: Double
+    /// 一度渦に入ってから追加で泡入れした回数
+    var reAirCount: Int
+    /// 追加の泡入れの合計の長さ（秒）
+    var reAirSec: Double
+    /// 最後の泡入れから渦（撹拌）へ移った位置（区間の先頭からの割合 0〜1）
     var transitionAt: Double
     /// 撹拌相の音の滑らかさ（1 / (1 + 音量の揺れの dB)。1 に近いほど滑らか）
     var stirStability: Double
@@ -36,6 +42,9 @@ struct CupFeatures: Codable, Equatable {
         case steamDurationSec = "steam_duration_sec"
         case startSquealSec = "start_squeal_sec"
         case airPhaseRatio = "air_phase_ratio"
+        case firstAirSec = "first_air_sec"
+        case reAirCount = "re_air_count"
+        case reAirSec = "re_air_sec"
         case transitionAt = "transition_at"
         case stirStability = "stir_stability"
         case stirLowBandRatio = "stir_low_band_ratio"
@@ -118,6 +127,10 @@ struct FeatureThresholds {
     var minSteamSec: Double = 8
     /// 始めのキュルルル: 区間の先頭で、高域の割合がこれ以上の間
     var squealHighRatio: Float = 0.9
+    /// 泡入れの途中のこの秒数以下の途切れはつなぐ
+    var airGapSec: Double = 1.5
+    /// この秒数に満たない「揺れの大きい区間」は泡入れに数えない（渦の中のゴボゴボ）
+    var minAirSec: Double = 2.5
     /// 止める間際の「キュルキュル」。撹拌相の値を測るときは末尾のこの秒数を除く
     var endSquealSec: Double = 3
     /// 破裂音: 撹拌相の中域が、その中央値よりこの dB 以上大きくなった立ち上がり
@@ -147,15 +160,19 @@ enum FeatureExtractor {
         }
 
         // 泡入れ（ジュルジュル）は音量が細かく上下し、渦に入ると滑らかになる。
-        // 音量の揺れ（±0.5 秒の標準偏差、1 秒平均）の列を「揺れの大きい前半」と「滑らかな後半」の2段に当てはめ、
-        // 段の境を泡入れから渦への境にする（変化点）。閾値で切るより、渦の中の短い破裂に引きずられにくい
-        let jitter = movingAverage((0..<n).map { i in std(db[max(0, i - framesPerSecond / 2)..<min(n, i + framesPerSecond / 2)]) },
-                                   width: framesPerSecond)
+        // 泡入れは1回とは限らない。一度渦に入ってから、泡が足りないと思って追加で泡入れすることがある（log/2026-11-06）。
+        // 音量の揺れ（±0.5 秒の標準偏差、中心の 1 秒平均）が区間内の高低の中点を超える区間を泡入れとし、airGapSec 以下の途切れはつなぐ。
+        // minAirSec に満たない区間は、渦の中のゴボゴボ（短い破裂）とみなして泡入れに数えない
+        let jitter = centeredAverage((0..<n).map { i in std(db[max(0, i - framesPerSecond / 2)..<min(n, i + framesPerSecond / 2)]) },
+                                     width: framesPerSecond)
         let fitEnd = max(squealEnd + 2, n - Int(t.endSquealSec * Double(framesPerSecond)))
-        var transition = squealEnd
-        if let cut = changePoint(Array(jitter[squealEnd..<fitEnd]), minSide: framesPerSecond, maxCutFraction: 0.7) {
-            transition = squealEnd + cut
-        }
+        let airSegments = segments(Array(jitter[squealEnd..<fitEnd]),
+                                   maxGap: Int(t.airGapSec * Double(framesPerSecond)),
+                                   minLength: Int(t.minAirSec * Double(framesPerSecond)))
+            .map { ($0.lowerBound + squealEnd)..<($0.upperBound + squealEnd) }
+        // 渦への境は、最後の泡入れの終わり
+        let transition = airSegments.last?.upperBound ?? squealEnd
+        let airFrames = airSegments.map(\.count).reduce(0, +)
 
         // 撹拌相の値は、止める間際の「キュルキュル」（末尾 endSquealSec 秒）を除いて測る
         let stirEnd = max(min(transition, n - 1) + 1, n - Int(t.endSquealSec * Double(framesPerSecond)))
@@ -180,7 +197,10 @@ enum FeatureExtractor {
         return CupFeatures(
             steamDurationSec: round3(Double(n) * BandAnalyzer.frameDuration),
             startSquealSec: round3(Double(squealEnd - squealStart) * BandAnalyzer.frameDuration),
-            airPhaseRatio: round3(Double(transition - squealEnd) / Double(n)),
+            airPhaseRatio: round3(Double(airFrames) / Double(n)),
+            firstAirSec: round3(Double(airSegments.first?.count ?? 0) * BandAnalyzer.frameDuration),
+            reAirCount: max(0, airSegments.count - 1),
+            reAirSec: round3(Double(airSegments.dropFirst().map(\.count).reduce(0, +)) * BandAnalyzer.frameDuration),
             transitionAt: round3(Double(transition) / Double(n)),
             stirStability: round3(stability),
             stirLowBandRatio: round3(lowRatio),
@@ -220,28 +240,28 @@ enum FeatureExtractor {
         return runs.filter { $0.count >= minFrames }.max { $0.count < $1.count }
     }
 
-    /// 列を「前の段」と「後ろの段」の2段に当てはめたとき、二乗誤差が最小になる境を返す。
-    /// 前の段の平均が後ろより大きい（揺れが減る）境だけを候補にする。見つからなければ nil
-    static func changePoint(_ x: [Float], minSide: Int, maxCutFraction: Double) -> Int? {
-        let n = x.count
-        guard n >= 2 * minSide else { return nil }
-        var prefix = [Double](repeating: 0, count: n + 1), prefix2 = prefix
-        for i in 0..<n {
-            prefix[i + 1] = prefix[i] + Double(x[i])
-            prefix2[i + 1] = prefix2[i] + Double(x[i]) * Double(x[i])
+    /// 列が区間内の高低（10% 点と 90% 点）の中点を超える区間を返す。maxGap 以下の途切れはつなぎ、minLength 未満は捨てる
+    static func segments(_ x: [Float], maxGap: Int, minLength: Int) -> [Range<Int>] {
+        guard x.count > 1 else { return [] }
+        let sorted = x.sorted()
+        let p10 = sorted[x.count / 10], p90 = sorted[min(x.count - 1, x.count * 9 / 10)]
+        guard p90 - p10 > 0.5 else { return [] }
+        let mid = (p10 + p90) / 2
+        var raw: [Range<Int>] = []
+        var start: Int?
+        for (i, v) in x.enumerated() {
+            if v >= mid { if start == nil { start = i } } else if let s = start { raw.append(s..<i); start = nil }
         }
-        func sse(_ a: Int, _ b: Int) -> Double {
-            let m = Double(b - a), s = prefix[b] - prefix[a]
-            return (prefix2[b] - prefix2[a]) - s * s / m
+        if let s = start { raw.append(s..<x.count) }
+        var merged: [Range<Int>] = []
+        for r in raw {
+            if let last = merged.last, r.lowerBound - last.upperBound <= maxGap {
+                merged[merged.count - 1] = last.lowerBound..<r.upperBound
+            } else {
+                merged.append(r)
+            }
         }
-        var best: (cut: Int, cost: Double)?
-        for c in minSide...min(n - minSide, Int(Double(n) * maxCutFraction)) {
-            let before = (prefix[c] - prefix[0]) / Double(c), after = (prefix[n] - prefix[c]) / Double(n - c)
-            guard before > after else { continue }
-            let cost = sse(0, c) + sse(c, n)
-            if best == nil || cost < best!.cost { best = (c, cost) }
-        }
-        return best?.cut
+        return merged.filter { $0.count >= minLength }
     }
 
     /// 後ろ向きの移動平均（逐次処理と同じ形）

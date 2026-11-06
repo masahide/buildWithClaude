@@ -10,7 +10,20 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertEqual(result.steamDurationSec, 49, accuracy: 2)
         XCTAssertEqual(result.startSquealSec, 4, accuracy: 1)
         XCTAssertEqual(result.airPhaseRatio, 13.0 / 49.0, accuracy: 0.08)
+        XCTAssertEqual(result.firstAirSec, 13, accuracy: 2)
+        XCTAssertEqual(result.reAirCount, 0)
         XCTAssertEqual(result.burstCount, 0)
+    }
+
+    func testDetectsAddedAirIntake() throws {
+        // 11-05 の録音と同じ形: 泡入れ 7 秒 → 渦 4 秒 → 追加の泡入れ 4 秒 → 渦
+        let result = try XCTUnwrap(SyntheticSteam.run(airSec: 7, stirSec: 30, bursts: 3, reAirSec: 4))
+        XCTAssertEqual(result.firstAirSec, 7, accuracy: 1.5)
+        XCTAssertEqual(result.reAirCount, 1)
+        XCTAssertEqual(result.reAirSec, 4, accuracy: 1.5)
+        // 渦への境は、追加の泡入れの終わり（キュルルル 4 + 泡入れ 7 + 渦 4 + 追加 4 = 19 秒）
+        XCTAssertEqual(result.transitionAt * result.steamDurationSec, 19, accuracy: 1.5)
+        XCTAssertEqual(result.burstCount, 3)
     }
 
     func testPurgeIsNotSteam() throws {
