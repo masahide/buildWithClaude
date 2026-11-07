@@ -80,6 +80,8 @@ def _previous_cup(before: str) -> Optional[dict]:
         if not status.exists():
             continue
         s = json.loads(status.read_text())
+        if s.get("duplicate_of"):  # 二重に届いた杯は比較に使わない
+            continue
         if s.get("status") == "done" and s.get("received_at", "") < before:
             done.append((s["received_at"], d))
     if not done:

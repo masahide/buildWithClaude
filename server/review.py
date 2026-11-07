@@ -44,7 +44,7 @@ def cups_of(day: date) -> list[dict]:
     cups = []
     for d in sorted(DATA.iterdir()):
         s = json.loads((d / "status.json").read_text())
-        if not s.get("received_at", "").startswith(day.isoformat()):
+        if s.get("duplicate_of") or not s.get("received_at", "").startswith(day.isoformat()):
             continue
         m = json.loads((d / "meta.json").read_text())
         cups.append({

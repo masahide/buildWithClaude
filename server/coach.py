@@ -257,10 +257,32 @@ def _diagnose_managed(content: list[dict]) -> Diagnosis:
             elif event.type == "session.status_terminated":
                 break
 
+    return diagnosis_from_session(client, session.id, texts)
+
+
+def diagnosis_from_session(client: anthropic.Anthropic, session_id: str, texts: Optional[list[str]] = None) -> Diagnosis:
+    """セッションの返答から診断の JSON を取り出す。返答に無ければ、作業用の環境に書いたファイル（diagnosis.json など）から読む"""
+    if texts is None:
+        texts = [b.text for e in client.beta.sessions.events.list(session_id=session_id)
+                 if e.type == "agent.message" for b in e.content if b.type == "text"]
     for text in reversed(texts):
         for block in reversed(re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.S)):
             try:
                 return Diagnosis.model_validate_json(block)
             except ValueError:
                 continue
-    raise CoachError(f"診断の JSON が見つかりません（session={session.id}）")
+    # 返答の最後に JSON を付けず、ファイルに書いて終えることがある（11-07）
+    for _ in range(3):  # 出力ファイルが一覧に出るまで少し遅れることがある
+        files = list(client.beta.files.list(scope_id=session_id, betas=["managed-agents-2026-04-01"]))
+        for f in sorted(files, key=lambda f: (not f.filename.endswith(".json"), f.filename)):
+            if not f.filename.endswith((".json", ".md")):
+                continue
+            body = client.beta.files.download(f.id).read().decode("utf-8", "replace")
+            candidates = [body] + re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", body, re.S)
+            for c in candidates:
+                try:
+                    return Diagnosis.model_validate_json(c)
+                except ValueError:
+                    continue
+        time.sleep(2)
+    raise CoachError(f"診断の JSON が見つかりません（session={session_id}）")
