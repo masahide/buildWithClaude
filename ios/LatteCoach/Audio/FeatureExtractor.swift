@@ -113,6 +113,14 @@ final class BandAnalyzer {
     }
 }
 
+/// スチームの長さに比例する長さ（秒）。下限と上限で挟む
+struct Scaled {
+    var fraction: Double
+    var min: Double
+    var max: Double
+    func seconds(forSteam steamSec: Double) -> Double { Swift.min(max, Swift.max(min, fraction * steamSec)) }
+}
+
 /// 閾値。11-05 のボイスメモ1本で合わせた暫定値（log/2026-11-05）。
 struct FeatureThresholds {
     /// 始まりの判定: 1 秒平均の音量が背景よりこの dB を超えた状態が onsetSustainSec 続いたら、スチームが始まったとみなす。
@@ -127,12 +135,14 @@ struct FeatureThresholds {
     var minSteamSec: Double = 8
     /// 始めのキュルルル: 区間の先頭で、高域の割合がこれ以上の間
     var squealHighRatio: Float = 0.9
-    /// 泡入れの途中のこの秒数以下の途切れはつなぐ
-    var airGapSec: Double = 1.5
-    /// この秒数に満たない「揺れの大きい区間」は泡入れに数えない（渦の中のゴボゴボ）
-    var minAirSec: Double = 2.5
-    /// 止める間際の「キュルキュル」。撹拌相の値を測るときは末尾のこの秒数を除く
-    var endSquealSec: Double = 3
+    // 以下の3つはスチームの長さに比例させる（家庭用でも 15 秒ほどで終わるマシンから 60 秒かかるマシンまである。log/2026-11-07）。
+    // 割合と、下限・上限の秒。上限は 11-05 の録音（56 秒）で合わせた値
+    /// 泡入れの途中のこの長さ以下の途切れはつなぐ
+    var airGap = Scaled(fraction: 0.03, min: 0.7, max: 1.5)
+    /// この長さに満たない「揺れの大きい区間」は泡入れに数えない（渦の中のゴボゴボ）
+    var minAir = Scaled(fraction: 0.05, min: 1.5, max: 2.5)
+    /// 止める間際の「キュルキュル」。撹拌相の値を測るときは末尾のこの長さを除く
+    var endSqueal = Scaled(fraction: 0.06, min: 1, max: 3)
     /// 破裂音: 撹拌相の中域が、その中央値よりこの dB 以上大きくなった立ち上がり
     var burstOverMedianDb: Float = 6
 }
@@ -161,21 +171,25 @@ enum FeatureExtractor {
 
         // 泡入れ（ジュルジュル）は音量が細かく上下し、渦に入ると滑らかになる。
         // 泡入れは1回とは限らない。一度渦に入ってから、泡が足りないと思って追加で泡入れすることがある（log/2026-11-06）。
-        // 音量の揺れ（±0.5 秒の標準偏差、中心の 1 秒平均）が区間内の高低の中点を超える区間を泡入れとし、airGapSec 以下の途切れはつなぐ。
-        // minAirSec に満たない区間は、渦の中のゴボゴボ（短い破裂）とみなして泡入れに数えない
+        // 音量の揺れ（±0.5 秒の標準偏差、中心の 1 秒平均）が区間内の高低の中点を超える区間を泡入れとし、airGap 以下の途切れはつなぐ。
+        // minAir に満たない区間は、渦の中のゴボゴボ（短い破裂）とみなして泡入れに数えない
+        // 揺れは ±0.5 秒の標準偏差（中心の 1 秒平均）。変化の中央値で測る案は、短い合成音では良くなったが、
+        // 11-05 の実際の録音で追加の泡入れの終わりを 2 秒早く切ったので採らない（log/2026-11-07）
         let jitter = centeredAverage((0..<n).map { i in std(db[max(0, i - framesPerSecond / 2)..<min(n, i + framesPerSecond / 2)]) },
                                      width: framesPerSecond)
-        let fitEnd = max(squealEnd + 2, n - Int(t.endSquealSec * Double(framesPerSecond)))
+        let steamSec = Double(n) * BandAnalyzer.frameDuration
+        let endSquealFrames = Int(t.endSqueal.seconds(forSteam: steamSec) * Double(framesPerSecond))
+        let fitEnd = max(squealEnd + 2, n - endSquealFrames)
         let airSegments = segments(Array(jitter[squealEnd..<fitEnd]),
-                                   maxGap: Int(t.airGapSec * Double(framesPerSecond)),
-                                   minLength: Int(t.minAirSec * Double(framesPerSecond)))
+                                   maxGap: Int(t.airGap.seconds(forSteam: steamSec) * Double(framesPerSecond)),
+                                   minLength: Int(t.minAir.seconds(forSteam: steamSec) * Double(framesPerSecond)))
             .map { ($0.lowerBound + squealEnd)..<($0.upperBound + squealEnd) }
         // 渦への境は、最後の泡入れの終わり
         let transition = airSegments.last?.upperBound ?? squealEnd
         let airFrames = airSegments.map(\.count).reduce(0, +)
 
-        // 撹拌相の値は、止める間際の「キュルキュル」（末尾 endSquealSec 秒）を除いて測る
-        let stirEnd = max(min(transition, n - 1) + 1, n - Int(t.endSquealSec * Double(framesPerSecond)))
+        // 撹拌相の値は、止める間際の「キュルキュル」（末尾 endSqueal）を除いて測る
+        let stirEnd = max(min(transition, n - 1) + 1, n - endSquealFrames)
         let stirRange = min(transition, n - 1)..<stirEnd
         let stirDb = Array(db[stirRange])
         let stability = 1 / (1 + Double(std(stirDb[...])))

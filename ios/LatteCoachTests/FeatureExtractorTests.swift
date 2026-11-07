@@ -43,6 +43,15 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertEqual(f.filter { detector.feed($0, background: bg) }.count, 1)
     }
 
+    func testShortSteamLikeFastMachines() throws {
+        // 15 秒ほどで終わるマシン: キュルルル 1 秒 + 泡入れ 3 秒 + 渦 9 秒 + キュルキュル 2 秒
+        let result = try XCTUnwrap(SyntheticSteam.run(squealSec: 1, airSec: 3, stirSec: 9, bursts: 0))
+        XCTAssertEqual(result.steamDurationSec, 15, accuracy: 1.5)
+        XCTAssertEqual(result.firstAirSec, 3, accuracy: 1)
+        XCTAssertEqual(result.reAirCount, 0)
+        // 12 秒で泡入れ 2 秒の杯は拾えない（既知の限界。実際の短いスチームの録音がないので、合成音には合わせない。log/2026-11-07）
+    }
+
     func testLongerAirPhaseGivesLargerRatio() throws {
         let short = try XCTUnwrap(SyntheticSteam.run(airSec: 6, stirSec: 30, bursts: 0))
         let long = try XCTUnwrap(SyntheticSteam.run(airSec: 18, stirSec: 30, bursts: 0))
