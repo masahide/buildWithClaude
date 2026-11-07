@@ -9,7 +9,7 @@ enum SyntheticSteam {
 
     /// reAirSec > 0 のときは、渦に入って reAirAfterSec 秒後に追加の泡入れを入れる
     static func frames(squealSec: Double, airSec: Double, stirSec: Double, bursts: Int, purgeOnly: Bool = false,
-                       reAirSec: Double = 0, reAirAfterSec: Double = 4) -> [BandFrame] {
+                       reAirSec: Double = 0, reAirAfterSec: Double = 4, finalPurge: Bool = false) -> [BandFrame] {
         var rng = SeededRandom(seed: 42)
         var samples: [Float] = []
         samples += noise(sec: 3, amp: 0.002, rng: &rng)
@@ -26,6 +26,12 @@ enum SyntheticSteam {
             samples += tone(sec: 2, hz: 1300, amp: 0.05, floor: 0.0032, rng: &rng)
         }
         samples += noise(sec: 3, amp: 0.001, rng: &rng)
+        if finalPurge {
+            // ノズルを拭いてから最後の空だし（ほとんどの人がする）
+            samples += noise(sec: 4, amp: 0.0025, rng: &rng)
+            samples += noise(sec: 1, amp: 0.3, rng: &rng)
+            samples += noise(sec: 2, amp: 0.001, rng: &rng)
+        }
         return BandAnalyzer(sampleRate: sampleRate).append(samples)
     }
 

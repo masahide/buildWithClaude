@@ -33,6 +33,16 @@ final class FeatureExtractorTests: XCTestCase {
         XCTAssertNil(SyntheticSteam.run(airSec: 0, stirSec: 0, bursts: 0, purgeOnly: true))
     }
 
+    func testFinalPurgeIsNotSteam() throws {
+        // 止めてから拭いて、最後に空だし。区間に含めず、終了通知も1回だけ
+        let f = SyntheticSteam.frames(squealSec: 4, airSec: 13, stirSec: 30, bursts: 0, finalPurge: true)
+        let bg = SyntheticSteam.background(f)
+        let result = try XCTUnwrap(FeatureExtractor.extract(frames: f, background: bg))
+        XCTAssertEqual(result.steamDurationSec, 49, accuracy: 2)
+        var detector = SteamEndDetector()
+        XCTAssertEqual(f.filter { detector.feed($0, background: bg) }.count, 1)
+    }
+
     func testLongerAirPhaseGivesLargerRatio() throws {
         let short = try XCTUnwrap(SyntheticSteam.run(airSec: 6, stirSec: 30, bursts: 0))
         let long = try XCTUnwrap(SyntheticSteam.run(airSec: 18, stirSec: 30, bursts: 0))
