@@ -21,6 +21,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 
 import coach
 import memory
+import params
 import review
 import sound_picture
 
@@ -61,7 +62,10 @@ def _previous_cup(before: str) -> Optional[dict]:
     _, d = max(done)
     meta = json.loads((d / "meta.json").read_text())
     s = json.loads((d / "status.json").read_text())
-    return {"ended_at": meta.get("ended_at"), "features": meta.get("features"),
+    feats = dict(meta["features"]) if meta.get("features") else None
+    if feats is not None:
+        feats["params_version"] = meta.get("params_version", 0)
+    return {"ended_at": meta.get("ended_at"), "features": feats,
             "self_rating": meta.get("self_rating"), "diagnosis": s.get("diagnosis"), "_dir": str(d)}
 
 
@@ -87,7 +91,10 @@ def _run(cup_id: str) -> None:
         if png:
             (d / "sound.png").write_bytes(png)
             pictures.append(("今回の杯の音の絵", png))
-        result = coach.diagnose(meta.get("features"), meta.get("self_rating"), photo, previous, pictures)
+        features = dict(meta["features"]) if meta.get("features") else None
+        if features is not None:
+            features["params_version"] = meta.get("params_version", 0)  # 0 は版の仕組みより前の杯
+        result = coach.diagnose(features, meta.get("self_rating"), photo, previous, pictures)
         status.update(status="done", diagnosis=result.model_dump())
     except Exception as e:  # 失敗はアプリに返して表示する
         log.exception("diagnosis failed: %s", cup_id)
@@ -114,6 +121,41 @@ def teach(text: str = Form(...)) -> dict:
         raise HTTPException(400, "text is empty")
     memory.teach(anthropic.Anthropic(), text, datetime.now().strftime("%Y-%m-%d %H:%M"))
     return {"ok": True}
+
+
+@app.get("/params")
+def get_params() -> dict:
+    """アプリが練習の開始時に取りに来る判定の閾値（今の版）"""
+    c = params.current()
+    return {"version": c["version"], "values": c["values"]}
+
+
+@app.get("/params/proposal")
+def get_proposal() -> dict:
+    """コーチの判定の調整の提案（承認待ち）。なければ proposal は null"""
+    p = params.proposal()
+    return {"proposal": p, "current_version": params.current()["version"],
+            "means": {k: s["means"] for k, s in params.SPEC.items()}}
+
+
+@app.post("/params/proposal/{decision}")
+def decide_proposal(decision: str) -> dict:
+    """本人が提案を適用する（accept）か見送る（reject）"""
+    import anthropic
+    if decision not in ("accept", "reject"):
+        raise HTTPException(404, "not found")
+    try:
+        result = params.decide(decision == "accept")
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+    p = result["proposal"]
+    when = datetime.now().strftime("%Y-%m-%d %H:%M")
+    if result["accepted"]:
+        line = f"{when}: v{result['version']} を本人が承認して適用。{p['changes']}（前 {p['before']}）。理由: {p['reason']}"
+    else:
+        line = f"{when}: 提案 {p['changes']} を本人が見送った。理由として出していたこと: {p['reason']}"
+    memory.note_params(anthropic.Anthropic(), line)
+    return {"accepted": result["accepted"], "version": params.current()["version"]}
 
 
 @app.post("/review", status_code=202)

@@ -19,8 +19,11 @@ from pathlib import Path
 
 import anthropic
 
+import re
+
 import coach
 import memory
+import params
 import sound_picture
 
 DATA = Path(__file__).parent / "data" / "cups"
@@ -92,7 +95,15 @@ def run(day: date) -> dict:
         "/reading.md に、何秒あたりの何を見たかと一緒に書いてください。アプリの判定の境（marks_sec）が形と食い違って見えたら、それも書いてください。\n"
         "メモリストアの記憶を読んでから、ルーブリックを満たすように書き足してください。"
         "あなたもこの人も、スチームの初心者から一緒に育っている途中です。分からないことは分からないと書き、"
-        "次に確かめることとして残してください。"
+        "次に確かめることとして残してください。\n\n"
+        "最後に、アプリの判定の閾値を変えたほうがよいかを考えてください。\n" + params.describe() + "\n"
+        "変えるのは、包絡の解析や本人から教わったこと（/reading.md）から、今の値で判定がずれていると根拠を持って言えるときだけ。"
+        "何秒あたりの何を見て、どの値をどう変えれば、どの杯のどの境が本人の耳や形に近づくかを書く。"
+        "変えると版が上がり、前の杯との数値の比較が切れることも考える。根拠がなければ提案しない（それが普通）。"
+        "提案は本人がアプリで見て、適用するか決める。\n"
+        "応答の最後に、次の形の JSON コードブロックを1つだけ出力する（提案しないときは params_proposal を null）:\n"
+        '{"params_proposal": {"changes": {"<名前>": <新しい値>}, "reason": "本人に見せる短い理由", '
+        '"evidence": "何秒あたりの何を見たか"}}'
     )
     texts: list[str] = []
     with client.beta.sessions.events.stream(session_id=session.id) as stream:
@@ -112,7 +123,23 @@ def run(day: date) -> dict:
                 break
             elif event.type == "session.status_terminated":
                 break
-    return {"day": day.isoformat(), "cups": len(cups), "session_id": session.id,
+    proposal = None
+    for t in reversed(texts):
+        blocks = re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", t, re.S)
+        if not blocks:
+            continue
+        try:
+            p = json.loads(blocks[-1]).get("params_proposal")
+        except (json.JSONDecodeError, AttributeError):
+            continue
+        if p:
+            proposal = params.propose(p.get("changes", {}), p.get("reason", ""), p.get("evidence", ""),
+                                      f"夜の振り返り {day.isoformat()}")
+            if proposal:
+                memory.note_params(client, f"{datetime.now():%Y-%m-%d %H:%M}: コーチが提案 {proposal['changes']}"
+                                           f"（前 {proposal['before']}）。理由: {proposal['reason']}。本人の承認待ち")
+        break
+    return {"day": day.isoformat(), "cups": len(cups), "session_id": session.id, "params_proposal": proposal,
             "finished_at": datetime.now().isoformat(), "summary": texts[-1] if texts else ""}
 
 

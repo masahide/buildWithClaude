@@ -41,6 +41,8 @@ struct Cup: Codable, Identifiable, Equatable {
     var envelope: [[Float]]?
     /// 判定の境の位置（包絡の先頭からの秒）。steam_start / squeal_end / transition / steam_end
     var marks: [String: Double]?
+    /// この杯を測った判定の版（サーバーの GET /params）。取れなかったときは nil（既定値で測った）
+    var paramsVersion: Int?
     var selfRating: SelfRating?
     var photoFilename: String?
     var status: Status = .awaitingPhoto

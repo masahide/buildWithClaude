@@ -83,6 +83,22 @@ def teach(client: anthropic.Anthropic, text: str, when: str) -> None:
         precondition={"type": "content_sha256", "content_sha256": current.content_sha256})
 
 
+def note_params(client: anthropic.Anthropic, line: str) -> None:
+    """判定の版の履歴（提案・承認・見送り）を /params.md に書き足す。コーチは次から読む"""
+    sid = store_id(client)
+    existing = next((m for m in client.beta.memory_stores.memories.list(sid, path_prefix="/", view="full")
+                     if m.type == "memory" and m.path == "/params.md"), None)
+    if existing is None:
+        client.beta.memory_stores.memories.create(
+            sid, path="/params.md",
+            content="# 判定の版の履歴\n\nアプリの判定の閾値は、コーチが提案し、本人が承認したときだけ変わる。"
+                    "版が違う杯どうしは、数値を直接比べない。\n\n" + f"- {line}\n")
+        return
+    client.beta.memory_stores.memories.update(
+        existing.id, memory_store_id=sid, content=existing.content.rstrip() + f"\n- {line}\n",
+        precondition={"type": "content_sha256", "content_sha256": existing.content_sha256})
+
+
 def read_all(client: anthropic.Anthropic) -> dict[str, str]:
     """アプリに見せる分を読む（パス → 中身）"""
     sid = store_id(client)

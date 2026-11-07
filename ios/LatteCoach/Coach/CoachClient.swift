@@ -25,8 +25,10 @@ struct CoachClient {
         let selfRating: String?
         let envelope: [[Float]]?
         let marks: [String: Double]?
+        let paramsVersion: Int?
         enum CodingKeys: String, CodingKey {
             case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating", envelope, marks
+            case paramsVersion = "params_version"
         }
     }
 
@@ -48,7 +50,8 @@ struct CoachClient {
             body.append("\r\n".data(using: .utf8)!)
         }
         let meta = Meta(startedAt: cup.startedAt, endedAt: cup.endedAt, features: cup.features,
-                        selfRating: cup.selfRating?.rawValue, envelope: cup.envelope, marks: cup.marks)
+                        selfRating: cup.selfRating?.rawValue, envelope: cup.envelope, marks: cup.marks,
+                        paramsVersion: cup.paramsVersion)
         part("meta", type: "application/json", data: try JSONEncoder.iso.encode(meta))
         if let photo { part("photo", filename: "pitcher.jpg", type: "image/jpeg", data: photo) }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
@@ -86,6 +89,44 @@ struct CoachClient {
         var allowed = CharacterSet.urlQueryAllowed
         allowed.remove(charactersIn: "&=+")
         req.httpBody = "text=\(text.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")".data(using: .utf8)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        try Self.check(response, data)
+    }
+
+    /// 判定の閾値の今の版
+    struct Params: Decodable {
+        let version: Int
+        let values: [String: Double]
+    }
+
+    func params() async throws -> Params {
+        let (data, response) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("params"))
+        try Self.check(response, data)
+        return try JSONDecoder().decode(Params.self, from: data)
+    }
+
+    /// コーチの判定の調整の提案（承認待ち）
+    struct Proposal: Decodable, Equatable {
+        let changes: [String: Double]
+        let before: [String: Double]
+        let reason: String
+        let evidence: String
+    }
+    struct ProposalResponse: Decodable {
+        let proposal: Proposal?
+        let current_version: Int
+        let means: [String: String]
+    }
+
+    func proposal() async throws -> ProposalResponse {
+        let (data, response) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("params/proposal"))
+        try Self.check(response, data)
+        return try JSONDecoder().decode(ProposalResponse.self, from: data)
+    }
+
+    func decide(accept: Bool) async throws {
+        var req = URLRequest(url: baseURL.appendingPathComponent("params/proposal/\(accept ? "accept" : "reject")"))
+        req.httpMethod = "POST"
         let (data, response) = try await URLSession.shared.data(for: req)
         try Self.check(response, data)
     }

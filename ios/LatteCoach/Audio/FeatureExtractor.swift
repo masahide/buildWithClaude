@@ -168,6 +168,23 @@ struct FeatureThresholds {
     var burstOverMedianDb: Float = 6
 }
 
+extension FeatureThresholds {
+    /// サーバーの判定の版（GET /params の values）で上書きする。知らない名前は無視し、無い名前は既定値のまま（decisions.md D20）
+    init(serverValues v: [String: Double]) {
+        self.init()
+        if let x = v["onset_db"] { onsetDb = Float(x) }
+        if let x = v["onset_sustain_sec"] { onsetSustainSec = x }
+        if let x = v["stay_db"] { stayDb = Float(x) }
+        if let x = v["end_quiet_sec"] { endQuietSec = x }
+        if let x = v["min_steam_sec"] { minSteamSec = x }
+        if let x = v["squeal_high_ratio"] { squealHighRatio = Float(x) }
+        if let x = v["air_gap_fraction"] { airGap.fraction = x }
+        if let x = v["min_air_fraction"] { minAir.fraction = x }
+        if let x = v["end_squeal_fraction"] { endSqueal.fraction = x }
+        if let x = v["burst_over_median_db"] { burstOverMedianDb = Float(x) }
+    }
+}
+
 enum FeatureExtractor {
     static let framesPerSecond = Int((1 / BandAnalyzer.frameDuration).rounded())
 

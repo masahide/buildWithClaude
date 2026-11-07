@@ -24,6 +24,9 @@ final class PracticeSession: ObservableObject {
     /// 前回区切ってからのフレーム。帯域エネルギーだけで音声は含まない（30 秒で 300 個）
     private var frames: [BandFrame] = []
     private var endDetector = SteamEndDetector()
+    /// 判定の閾値。練習の開始時にサーバーの今の版を取りに行く（取れなければ既定値）
+    private var thresholds = FeatureThresholds()
+    @Published private(set) var paramsVersion: Int?
     private var interruptionObserver: NSObjectProtocol?
 
     init() {
@@ -48,6 +51,14 @@ final class PracticeSession: ObservableObject {
             return
         }
         await Notifier.requestAuthorization()
+        if let client = CoachClient.fromBundle(), let p = try? await client.params() {
+            thresholds = FeatureThresholds(serverValues: p.values)
+            paramsVersion = p.version
+        } else {
+            thresholds = FeatureThresholds()
+            paramsVersion = nil
+        }
+        endDetector = SteamEndDetector(thresholds: thresholds)
         calibration = []
         frames = []
         endDetector.reset()
@@ -69,14 +80,15 @@ final class PracticeSession: ObservableObject {
 
     /// 今の杯を区切り、特徴量を計算して返す。区間が見つからなければ features は nil。
     func cutCup() -> Cup {
-        let features = FeatureExtractor.extract(frames: frames, background: background)
+        let features = FeatureExtractor.extract(frames: frames, background: background, thresholds: thresholds)
         var cup = Cup(startedAt: cupStartedAt, endedAt: Date(), features: features)
+        cup.paramsVersion = paramsVersion
         let bg = max(background, 1e-12)
         // 有効数字3桁に丸めて送信量を抑える
         func r(_ v: Float) -> Float { v == 0 ? 0 : Float(String(format: "%.3g", v / bg)) ?? v / bg }
         cup.envelope = frames.map { [r($0.low), r($0.mid), r($0.high), r($0.top)] }
         // 判定の境の位置（包絡の先頭からの秒）。サーバーが音の絵を切り出し、縦線を引くのに使う（sound-picture.md）
-        if let f = features, let range = FeatureExtractor.longestSteamRange(frames: frames, background: background, thresholds: .init()) {
+        if let f = features, let range = FeatureExtractor.longestSteamRange(frames: frames, background: background, thresholds: thresholds) {
             let start = Double(range.lowerBound) * BandAnalyzer.frameDuration
             cup.marks = ["steam_start": start,
                          "squeal_end": start + f.startSquealSec,

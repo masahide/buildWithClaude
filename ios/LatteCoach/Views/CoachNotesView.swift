@@ -5,6 +5,19 @@ import SwiftUI
 final class CoachNotesModel: ObservableObject {
     @Published private(set) var notes: CoachClient.Notes?
     @Published private(set) var error: String?
+    @Published private(set) var proposal: CoachClient.Proposal?
+    @Published private(set) var means: [String: String] = [:]
+    @Published private(set) var paramsVersion: Int?
+
+    func decide(accept: Bool) async {
+        guard let client = CoachClient.fromBundle() else { return }
+        do {
+            try await client.decide(accept: accept)
+            await refresh()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
 
     func teach(_ text: String) async -> Bool {
         guard let client = CoachClient.fromBundle() else { return false }
@@ -22,6 +35,10 @@ final class CoachNotesModel: ObservableObject {
         guard let client = CoachClient.fromBundle() else { return }
         do {
             notes = try await client.notes()
+            let p = try await client.proposal()
+            proposal = p.proposal
+            means = p.means
+            paramsVersion = p.current_version
             error = nil
         } catch {
             self.error = error.localizedDescription
@@ -36,6 +53,11 @@ struct CoachNotesSection: View {
 
     var body: some View {
         Section("コーチと一緒に育つ") {
+            if let p = model.proposal {
+                ProposalView(proposal: p, means: model.means) { accept in
+                    Task { await model.decide(accept: accept) }
+                }
+            }
             if let n = model.notes {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("今日のテーマ").font(.caption).foregroundStyle(.secondary)
@@ -58,6 +80,9 @@ struct CoachNotesSection: View {
                     }
                     .disabled(lesson.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending)
                 }
+                if let v = model.paramsVersion {
+                    Text("判定の版: v\(v)（次に練習を開始したときから使う）").font(.caption2).foregroundStyle(.secondary)
+                }
             } else if let e = model.error {
                 Text(e).font(.caption).foregroundStyle(.red)
             } else {
@@ -74,5 +99,37 @@ struct CoachNotesSection: View {
         let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
         return (try? AttributedString(markdown: text.isEmpty ? "（まだない）" : text, options: opts))
             ?? AttributedString(text)
+    }
+}
+
+/// コーチの判定の調整の提案。本人が適用するか見送るかを決める（decisions.md D20）
+struct ProposalView: View {
+    let proposal: CoachClient.Proposal
+    let means: [String: String]
+    var decide: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("コーチから判定の調整の提案", systemImage: "slider.horizontal.3").font(.headline)
+            Text(proposal.reason)
+            ForEach(proposal.changes.keys.sorted(), id: \.self) { k in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(k): \(Self.fmt(proposal.before[k])) → \(Self.fmt(proposal.changes[k]))").font(.callout.monospaced())
+                    if let m = means[k] { Text(m).font(.caption2).foregroundStyle(.secondary) }
+                }
+            }
+            DisclosureGroup("根拠") { Text(proposal.evidence).font(.caption) }
+            Text("適用すると判定の版が上がり、前の杯と数値を直接比べられなくなります。").font(.caption2).foregroundStyle(.secondary)
+            HStack {
+                Button("適用する") { decide(true) }.buttonStyle(.borderedProminent)
+                Button("見送る") { decide(false) }.buttonStyle(.bordered)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    static func fmt(_ v: Double?) -> String {
+        guard let v else { return "-" }
+        return v == v.rounded() ? String(Int(v)) : String(format: "%.3g", v)
     }
 }
