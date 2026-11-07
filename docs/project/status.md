@@ -36,7 +36,7 @@
 ## 環境の注意（この Mac）
 
 - 開発は Mac だけで行う。Windows では編集しない（D11）
-- **署名には Mac のログインキーチェーンの解錠が要る。** SSH 経由のシェルからだと `errSecInternalComponent` で署名に失敗する。本人に **Claude Code の入力欄から** `! security unlock-keychain ~/Library/Keychains/login.keychain-db` を実行してもらう（パスワードは本人が入れる。受け取らない）。Mac の「ターミナル」アプリやキーチェーンアクセスで解錠しても、SSH 側のセッションには効かない。解錠できたかは `security show-keychain-info ~/Library/Keychains/login.keychain-db` で確かめる（`no-timeout` と出れば解錠済み）。再起動するとまたロックされる
+- **署名には Mac のログインキーチェーンの解錠が要る。** SSH 経由のシェルからだと `errSecInternalComponent` で署名に失敗する。本人に **Claude Code の入力欄から** `! security unlock-keychain ~/Library/Keychains/login.keychain-db` を実行してもらう（パスワードは本人が入れる。受け取らない）。Mac の「ターミナル」アプリやキーチェーンアクセスで解錠しても、SSH 側のセッションには効かない。解錠できたかは `security show-keychain-info ~/Library/Keychains/login.keychain-db` で確かめる（`no-timeout` と出れば解錠済み）。再起動するとまたロックされる。11-07 に本人がキーチェーンの自動ロック（時間・スリープ）を外した（`security set-keychain-settings`、戻すときは `-l -u` を付ける）ので、再起動しない限りロックされない
 - 無料の Apple ID（Personal Team）で署名している。アプリは7日ごとに入れ直しが要る（D12）
 - 署名チーム・バンドル ID・サーバー URL は `ios/Config/Local.xcconfig`（git 管理外、この Mac にだけある）。プロジェクトを変えたら `cd ios && xcodegen` で作り直す
 - iPhone への入れ直し（端末の ID は `xcrun devicectl list devices` で確かめる）:
