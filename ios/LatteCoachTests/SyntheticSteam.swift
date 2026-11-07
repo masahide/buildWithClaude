@@ -12,9 +12,9 @@ enum SyntheticSteam {
                        reAirSec: Double = 0, reAirAfterSec: Double = 4, finalPurge: Bool = false) -> [BandFrame] {
         var rng = SeededRandom(seed: 42)
         var samples: [Float] = []
-        samples += noise(sec: 3, amp: 0.002, rng: &rng)
+        samples += room(sec: 3, amp: 0.002, rng: &rng)
         samples += noise(sec: 1, amp: 0.3, rng: &rng)           // 空だし
-        samples += noise(sec: 5, amp: 0.0025, rng: &rng)        // 物音
+        samples += room(sec: 5, amp: 0.0025, rng: &rng)         // 物音
         if !purgeOnly {
             samples += tone(sec: squealSec, hz: 3500, amp: 0.3, floor: 0.002, rng: &rng)
             samples += aeration(sec: airSec, rng: &rng)
@@ -25,12 +25,12 @@ enum SyntheticSteam {
             samples += stir(sec: stirSec, bursts: bursts, rng: &rng)
             samples += tone(sec: 2, hz: 1300, amp: 0.05, floor: 0.0032, rng: &rng)
         }
-        samples += noise(sec: 3, amp: 0.001, rng: &rng)
+        samples += room(sec: 3, amp: 0.001, rng: &rng)
         if finalPurge {
             // ノズルを拭いてから最後の空だし（ほとんどの人がする）
-            samples += noise(sec: 4, amp: 0.0025, rng: &rng)
+            samples += room(sec: 4, amp: 0.0025, rng: &rng)
             samples += noise(sec: 1, amp: 0.3, rng: &rng)
-            samples += noise(sec: 2, amp: 0.001, rng: &rng)
+            samples += room(sec: 2, amp: 0.001, rng: &rng)
         }
         return BandAnalyzer(sampleRate: sampleRate).append(samples)
     }
@@ -50,6 +50,15 @@ enum SyntheticSteam {
 
     private static func noise(sec: Double, amp: Float, rng: inout SeededRandom) -> [Float] {
         (0..<Int(sec * sampleRate)).map { _ in amp * rng.nextSigned() }
+    }
+
+    /// 部屋の物音（低い音が中心）。白色雑音を強く低域通過させる。実際の部屋の背景音は低い音に偏っている
+    private static func room(sec: Double, amp: Float, rng: inout SeededRandom) -> [Float] {
+        var y: Float = 0
+        return (0..<Int(sec * sampleRate)).map { _ in
+            y += 0.02 * (rng.nextSigned() - y)
+            return amp * 8 * y
+        }
     }
 
     private static func tone(sec: Double, hz: Double, amp: Float, floor: Float, rng: inout SeededRandom) -> [Float] {

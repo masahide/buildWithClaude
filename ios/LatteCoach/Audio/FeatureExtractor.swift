@@ -148,9 +148,10 @@ struct FeatureThresholds {
     /// 空だし（1 秒ほど）は続かないので弾かれる
     var onsetDb: Float = 10
     var onsetSustainSec: Double = 2
-    /// 続きの判定: 1 秒平均の音量がこの dB を下回った状態が endQuietSec 続いたら、スチームが終わったとみなす。
-    /// 渦の撹拌相は背景より +2〜5 dB しかないので、低めにする
-    var stayDb: Float = 1.5
+    /// 続きの判定: 高域（2-8 kHz）と低域（50-400 Hz）の音量の差（1 秒平均、dB）がこれを下回った状態が endQuietSec 続いたら、
+    /// スチームが終わったとみなす。スチームのシューという音は高く、部屋の物音は低い。
+    /// 11-07 の杯では渦の撹拌相が背景と同じくらいの大きさで、全体の音量では途中で切れた（log/2026-11-07、D22）
+    var tiltStayDb: Float = -5
     var endQuietSec: Double = 2
     /// この秒数に満たない区間は弾く
     var minSteamSec: Double = 8
@@ -174,7 +175,7 @@ extension FeatureThresholds {
         self.init()
         if let x = v["onset_db"] { onsetDb = Float(x) }
         if let x = v["onset_sustain_sec"] { onsetSustainSec = x }
-        if let x = v["stay_db"] { stayDb = Float(x) }
+        if let x = v["tilt_stay_db"] { tiltStayDb = Float(x) }
         if let x = v["end_quiet_sec"] { endQuietSec = x }
         if let x = v["min_steam_sec"] { minSteamSec = x }
         if let x = v["squeal_high_ratio"] { squealHighRatio = Float(x) }
@@ -261,10 +262,16 @@ enum FeatureExtractor {
         )
     }
 
-    /// 1 秒平均の音量（背景音比 dB）にヒステリシスをかけて、最長のスチーム区間を返す。
+    /// 高域と低域の差（dB）。スチームが鳴っている間は高く、部屋の物音だけのときは低い
+    static func tilt(_ f: BandFrame) -> Float {
+        10 * log10(max(f.high, 1e-12)) - 10 * log10(max(f.low, 1e-12))
+    }
+
+    /// 始まりは 1 秒平均の音量（背景音比 dB）、続きは高域と低域の差で、最長のスチーム区間を返す。
     static func longestSteamRange(frames: [BandFrame], background: Float, thresholds t: FeatureThresholds) -> Range<Int>? {
         let bg = max(background, 1e-12)
         let level = centeredAverage(frames.map { 10 * log10(max($0.total, 1e-12) / bg) }, width: framesPerSecond)
+        let tilt = centeredAverage(frames.map(Self.tilt), width: framesPerSecond)
         let sustain = Int(t.onsetSustainSec * Double(framesPerSecond))
         let endQuiet = Int(t.endQuietSec * Double(framesPerSecond))
         var runs: [Range<Int>] = []
@@ -273,7 +280,7 @@ enum FeatureExtractor {
         var quiet = 0
         for (i, v) in level.enumerated() {
             if let s = start {
-                quiet = v < t.stayDb ? quiet + 1 : 0
+                quiet = tilt[i] < t.tiltStayDb ? quiet + 1 : 0
                 if quiet >= endQuiet {
                     runs.append(s..<(i - quiet + 1))
                     start = nil
@@ -348,10 +355,11 @@ enum FeatureExtractor {
 }
 
 /// スチームの鳴り終わりを逐次判定する（区間終了の通知用）。杯の区切りは手動ボタンで行う。
-/// 判定は longestSteamRange と同じ（1 秒平均の音量にヒステリシス）。
+/// 判定は longestSteamRange と同じ（始まりは音量、続きは高域と低域の差）。
 struct SteamEndDetector {
     var thresholds = FeatureThresholds()
     private var recent: [Float] = []
+    private var recentTilt: [Float] = []
     private var aboveRun = 0
     private var steamFrames = 0
     private var quietFrames = 0
@@ -366,6 +374,9 @@ struct SteamEndDetector {
         recent.append(10 * log10(max(frame.total, 1e-12) / max(background, 1e-12)))
         if recent.count > fps { recent.removeFirst() }
         let level = recent.reduce(0, +) / Float(recent.count)
+        recentTilt.append(FeatureExtractor.tilt(frame))
+        if recentTilt.count > fps { recentTilt.removeFirst() }
+        let tilt = recentTilt.reduce(0, +) / Float(recentTilt.count)
 
         if !inSteam {
             aboveRun = level > thresholds.onsetDb ? aboveRun + 1 : 0
@@ -377,7 +388,7 @@ struct SteamEndDetector {
             return false
         }
         steamFrames += 1
-        quietFrames = level < thresholds.stayDb ? quietFrames + 1 : 0
+        quietFrames = tilt < thresholds.tiltStayDb ? quietFrames + 1 : 0
         guard quietFrames >= Int(thresholds.endQuietSec * Double(fps)) else { return false }
         inSteam = false
         aboveRun = 0
@@ -392,6 +403,7 @@ struct SteamEndDetector {
     /// 杯を区切ったら次の杯に備えて戻す。
     mutating func reset() {
         recent = []
+        recentTilt = []
         aboveRun = 0
         steamFrames = 0
         quietFrames = 0

@@ -15,6 +15,16 @@ final class CupSender {
             store.update(id) { $0.status = .ready; $0.errorMessage = "サーバー未設定（COACH_SERVER_URL）。端末に保存しました" }
             return
         }
+        // サーバーに届いている杯は送り直さず、結果だけ取りに行く（二重に送らない）
+        if let serverId = cup.serverId {
+            store.update(id) { $0.status = .diagnosing; $0.errorMessage = nil }
+            do {
+                try await poll(client: client, id: id, serverId: serverId)
+            } catch {
+                store.update(id) { $0.status = .failed; $0.errorMessage = error.localizedDescription }
+            }
+            return
+        }
         store.update(id) { $0.status = .sending; $0.errorMessage = nil }
         do {
             let photo = cup.photoFilename.flatMap(store.photoData)

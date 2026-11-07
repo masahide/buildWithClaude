@@ -54,17 +54,17 @@ final class FeatureExtractorTests: XCTestCase {
 
     func testServerParamsV1MatchDefaults() {
         // サーバーの判定の版 v1（server/params.py の SPEC の既定値）と、アプリの既定値が同じであること
-        let v1: [String: Double] = ["onset_db": 10, "onset_sustain_sec": 2, "stay_db": 1.5, "end_quiet_sec": 2,
+        let v1: [String: Double] = ["onset_db": 10, "onset_sustain_sec": 2, "tilt_stay_db": -5, "end_quiet_sec": 2,
                                     "min_steam_sec": 8, "squeal_high_ratio": 0.9, "air_gap_fraction": 0.03,
                                     "min_air_fraction": 0.05, "end_squeal_fraction": 0.06, "burst_over_median_db": 6]
         let a = FeatureThresholds(serverValues: v1), b = FeatureThresholds()
         XCTAssertEqual(a.onsetDb, b.onsetDb); XCTAssertEqual(a.onsetSustainSec, b.onsetSustainSec)
-        XCTAssertEqual(a.stayDb, b.stayDb); XCTAssertEqual(a.endQuietSec, b.endQuietSec)
+        XCTAssertEqual(a.tiltStayDb, b.tiltStayDb); XCTAssertEqual(a.endQuietSec, b.endQuietSec)
         XCTAssertEqual(a.minSteamSec, b.minSteamSec); XCTAssertEqual(a.squealHighRatio, b.squealHighRatio, accuracy: 1e-6)
         XCTAssertEqual(a.airGap.fraction, b.airGap.fraction); XCTAssertEqual(a.minAir.fraction, b.minAir.fraction)
         XCTAssertEqual(a.endSqueal.fraction, b.endSqueal.fraction); XCTAssertEqual(a.burstOverMedianDb, b.burstOverMedianDb)
         // サーバーが値を変えれば判定に効く
-        XCTAssertEqual(FeatureThresholds(serverValues: ["stay_db": 3]).stayDb, 3)
+        XCTAssertEqual(FeatureThresholds(serverValues: ["tilt_stay_db": -3]).tiltStayDb, -3)
     }
 
     func testLongerAirPhaseGivesLargerRatio() throws {

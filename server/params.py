@@ -21,7 +21,7 @@ DIR = Path(__file__).parent / "data" / "params"
 SPEC: dict[str, dict] = {
     "onset_db": {"default": 10, "min": 4, "max": 20, "means": "1秒平均の音量が背景よりこの dB を超えた状態が onset_sustain_sec 続いたらスチームの始まり"},
     "onset_sustain_sec": {"default": 2, "min": 1, "max": 4, "means": "始まりとみなすのに要る継続時間。空だし（約1秒）を除くため"},
-    "stay_db": {"default": 1.5, "min": 0.5, "max": 6, "means": "1秒平均の音量がこれを end_quiet_sec 下回ったらスチームの終わり。渦の静かな撹拌でも途切れない値にする"},
+    "tilt_stay_db": {"default": -5, "min": -15, "max": 5, "means": "高域（2-8kHz）と低域（50-400Hz）の音量の差（1秒平均、dB）がこれを end_quiet_sec 下回ったらスチームの終わり。スチームは高い音、部屋の物音は低い音"},
     "end_quiet_sec": {"default": 2, "min": 1, "max": 5, "means": "終わりとみなすのに要る静かな時間"},
     "min_steam_sec": {"default": 8, "min": 4, "max": 20, "means": "これより短い区間はスチームとみなさない"},
     "squeal_high_ratio": {"default": 0.9, "min": 0.6, "max": 0.98, "means": "始めのキュルルル: 区間の先頭で高域（2-8kHz）の割合がこれ以上の間"},
@@ -46,6 +46,19 @@ def current() -> dict:
         _path(1).write_text(json.dumps(v1, ensure_ascii=False, indent=2))
         cur.write_text(json.dumps({"version": 1}))
     return json.loads(_path(json.loads(cur.read_text())["version"]).read_text())
+
+
+def migrate(reason: str, note: str) -> Optional[dict]:
+    """判定の方法を変えたとき（SPEC の名前が変わったとき）、新しい名前を既定値で足し、無くなった名前を除いた版を作る"""
+    cur = current()
+    values = {k: cur["values"].get(k, s["default"]) for k, s in SPEC.items()}
+    if values == cur["values"]:
+        return None
+    new = {"version": cur["version"] + 1, "values": values, "reason": reason, "evidence": note,
+           "applied_at": datetime.now().isoformat(), "approved_by": "本人と開発で決めた判定の方法の変更"}
+    _path(new["version"]).write_text(json.dumps(new, ensure_ascii=False, indent=2))
+    (DIR / "current.json").write_text(json.dumps({"version": new["version"]}))
+    return new
 
 
 def describe() -> str:

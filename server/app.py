@@ -46,6 +46,17 @@ def _practice_path(practice_id: str, seq: int) -> Path:
 app = FastAPI(title="Steam Coach")
 
 
+@app.on_event("startup")
+def resume_unfinished() -> None:
+    """サーバーが診断の途中で止まった杯を、起動時に診断し直す"""
+    import threading
+    for d in DATA.iterdir():
+        status = d / "status.json"
+        if status.exists() and json.loads(status.read_text()).get("status") == "diagnosing":
+            log.info("resume diagnosis: %s", d.name)
+            threading.Thread(target=_run, args=(d.name,), daemon=True).start()
+
+
 def _dir(cup_id: str) -> Path:
     # パスに使うので UUID 以外は受け付けない
     try:
@@ -96,8 +107,29 @@ def _run(cup_id: str) -> None:
         prev_png = Path(previous.pop("_dir")) / "sound.png" if previous else None
         if prev_png and prev_png.exists():
             pictures.append(("前の杯の音の絵", prev_png.read_bytes()))
+        audio_path = d / "audio.wav"
+        features = dict(meta["features"]) if meta.get("features") else None
+        if features is not None:
+            features["params_version"] = meta.get("params_version", 0)  # 0 は版の仕組みより前の杯
+        # 音があれば、今の判定の版で測り直してから診断する（D21）。アプリが出した値は features_app に残す
+        if audio_path.exists():
+            try:
+                import rejudge
+                cur = params.current()
+                rj = rejudge.judge(audio_path, cur["values"], meta.get("background"))
+                if rj.get("features"):
+                    start = meta.get("audio_start_sec") or 0.0
+                    meta["features_app"] = meta.get("features")
+                    meta["features"] = rj["features"]
+                    meta["marks_app"] = meta.get("marks")
+                    meta["marks"] = {k: v + start for k, v in (rj.get("marks") or {}).items()}  # 包絡の先頭からの秒に直す
+                    meta["params_version"] = cur["version"]
+                    meta["rejudged_at"] = datetime.now().isoformat()
+                    _write(d / "meta.json", meta)
+                    features = dict(rj["features"], params_version=cur["version"])
+            except Exception:
+                log.exception("rejudge failed: %s", cup_id)
         try:
-            audio_path = d / "audio.wav"
             png = sound_picture.draw(meta.get("envelope") or [], meta.get("marks"),
                                      f"{status['received_at'][:16].replace('T', ' ')} の杯",
                                      audio=audio_path.read_bytes() if audio_path.exists() else None,
@@ -108,9 +140,6 @@ def _run(cup_id: str) -> None:
         if png:
             (d / "sound.png").write_bytes(png)
             pictures.append(("今回の杯の音の絵", png))
-        features = dict(meta["features"]) if meta.get("features") else None
-        if features is not None:
-            features["params_version"] = meta.get("params_version", 0)  # 0 は版の仕組みより前の杯
         result = coach.diagnose(features, meta.get("self_rating"), photo, previous, pictures)
         status.update(status="done", diagnosis=result.model_dump())
     except Exception as e:  # 失敗はアプリに返して表示する
