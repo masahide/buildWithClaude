@@ -26,9 +26,11 @@ struct CoachClient {
         let envelope: [[Float]]?
         let marks: [String: Double]?
         let paramsVersion: Int?
+        let audioStartSec: Double?
+        let background: Float?
         enum CodingKeys: String, CodingKey {
             case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating", envelope, marks
-            case paramsVersion = "params_version"
+            case paramsVersion = "params_version", audioStartSec = "audio_start_sec", background
         }
     }
 
@@ -38,7 +40,7 @@ struct CoachClient {
         let error: String?
     }
 
-    func submit(cup: Cup, photo: Data?) async throws -> String {
+    func submit(cup: Cup, photo: Data?, audio: Data? = nil) async throws -> String {
         let boundary = "lattecoach-\(UUID().uuidString)"
         var body = Data()
         func part(_ name: String, filename: String? = nil, type: String, data: Data) {
@@ -51,15 +53,17 @@ struct CoachClient {
         }
         let meta = Meta(startedAt: cup.startedAt, endedAt: cup.endedAt, features: cup.features,
                         selfRating: cup.selfRating?.rawValue, envelope: cup.envelope, marks: cup.marks,
-                        paramsVersion: cup.paramsVersion)
+                        paramsVersion: cup.paramsVersion, audioStartSec: cup.audioStartSec,
+                        background: cup.background)
         part("meta", type: "application/json", data: try JSONEncoder.iso.encode(meta))
         if let photo { part("photo", filename: "pitcher.jpg", type: "image/jpeg", data: photo) }
+        if let audio { part("audio", filename: "steam.wav", type: "audio/wav", data: audio) }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         var req = URLRequest(url: baseURL.appendingPathComponent("cups"))
         req.httpMethod = "POST"
         // サーバーが止まっているときに「送信中」で長く待たせない
-        req.timeoutInterval = 30
+        req.timeoutInterval = 60  // 音（1〜3 MB）を含むので少し長め
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         let (data, response) = try await URLSession.shared.upload(for: req, from: body)
         try Self.check(response, data)

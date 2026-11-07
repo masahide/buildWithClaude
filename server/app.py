@@ -83,8 +83,11 @@ def _run(cup_id: str) -> None:
         if prev_png and prev_png.exists():
             pictures.append(("前の杯の音の絵", prev_png.read_bytes()))
         try:
+            audio_path = d / "audio.wav"
             png = sound_picture.draw(meta.get("envelope") or [], meta.get("marks"),
-                                     f"{status['received_at'][:16].replace('T', ' ')} の杯")
+                                     f"{status['received_at'][:16].replace('T', ' ')} の杯",
+                                     audio=audio_path.read_bytes() if audio_path.exists() else None,
+                                     audio_start_sec=meta.get("audio_start_sec") or 0.0)
         except Exception:
             log.exception("sound picture failed: %s", cup_id)
             png = None
@@ -196,7 +199,7 @@ def health() -> dict:
 
 @app.post("/cups", status_code=202)
 async def create_cup(background: BackgroundTasks, meta: str = Form(...),
-                     photo: Optional[UploadFile] = File(None)) -> dict:
+                     photo: Optional[UploadFile] = File(None), audio: Optional[UploadFile] = File(None)) -> dict:
     try:
         meta_obj = json.loads(meta)
     except json.JSONDecodeError:
@@ -207,6 +210,9 @@ async def create_cup(background: BackgroundTasks, meta: str = Form(...),
     _write(d / "meta.json", meta_obj)
     if photo is not None:
         (d / "photo.jpg").write_bytes(await photo.read())
+    if audio is not None:
+        # スチーム区間の前後だけの音。自宅のこの Mac にだけ置き、Claude には渡さない（D21）
+        (d / "audio.wav").write_bytes(await audio.read())
     _write(d / "status.json", {"status": "diagnosing", "received_at": datetime.now().isoformat()})
     background.add_task(_run, cup_id)
     return {"cup_id": cup_id}

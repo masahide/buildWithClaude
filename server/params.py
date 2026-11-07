@@ -74,6 +74,14 @@ def propose(changes: dict, reason: str, evidence: str, source: str) -> Optional[
         return None
     p = {"changes": clean, "before": {k: cur[k] for k in clean}, "reason": reason, "evidence": evidence,
          "source": source, "proposed_at": datetime.now().isoformat()}
+    # 承認する前に、保存してある杯の音で測り直して見せる（D21）
+    try:
+        import rejudge
+        rows = rejudge.compare(dict(cur), {**cur, **clean})
+        p["replay"] = rows
+        p["replay_summary"] = rejudge.summary(rows)
+    except Exception as e:  # 測り直せなくても提案は出す
+        p["replay_summary"] = f"過去の杯で測り直せなかった: {e}"
     (DIR / "proposal.json").write_text(json.dumps(p, ensure_ascii=False, indent=2))
     return p
 

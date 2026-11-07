@@ -1,8 +1,9 @@
 // ボイスメモにアプリと同じ判定を当て、3帯域の包絡・背景音・判定の境・特徴量を JSON で出す（開発用）。
 // アプリの判定をそのまま使うため、FeatureExtractor.swift と一緒にコンパイルする:
 //   swiftc -O ios/LatteCoach/Audio/FeatureExtractor.swift scripts/voice_memo/judge/main.swift -o <出力先>/judge
-//   <出力先>/judge 録音.m4a > 録音.json
-// 背景音はアプリと同じく、先頭3秒の中央値。音声そのものは出力しない。
+//   <出力先>/judge 録音.m4a [閾値.json] [背景音] > 録音.json
+// 閾値.json はサーバーの判定の版の values（server/params.py）。省略するとアプリの既定値。
+// 背景音は、指定があればその値（アプリが練習の開始時に測った値）、なければ先頭3秒の中央値。音声そのものは出力しない。サーバーが過去の杯を測り直すのにも使う（D21）。
 import AVFoundation
 import Foundation
 
@@ -20,13 +21,19 @@ while i < samples.count {  // アプリと同じく 4096 サンプルずつ渡�
     i += 4096
 }
 let head = frames.prefix(30).map(\.total).sorted()
-let bg = max(head[head.count / 2], 1e-12)
+let bg = max(CommandLine.arguments.count > 3 ? (Float(CommandLine.arguments[3]) ?? head[head.count / 2]) : head[head.count / 2], 1e-12)
 
+var thresholds = FeatureThresholds()
+if CommandLine.arguments.count > 2,
+   let data = FileManager.default.contents(atPath: CommandLine.arguments[2]),
+   let values = try? JSONDecoder().decode([String: Double].self, from: data) {
+    thresholds = FeatureThresholds(serverValues: values)
+}
 let fps = Double(FeatureExtractor.framesPerSecond)
 var marks: [String: Double] = [:]
 var features: CupFeatures?
-if let r = FeatureExtractor.longestSteamRange(frames: frames, background: bg, thresholds: .init()),
-   let f = FeatureExtractor.extract(frames: frames, background: bg) {
+if let r = FeatureExtractor.longestSteamRange(frames: frames, background: bg, thresholds: thresholds),
+   let f = FeatureExtractor.extract(frames: frames, background: bg, thresholds: thresholds) {
     features = f
     let start = Double(r.lowerBound) / fps
     marks = ["steam_start": start,

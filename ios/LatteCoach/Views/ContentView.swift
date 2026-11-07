@@ -36,7 +36,12 @@ struct ContentView: View {
     }
 
     private func cut() {
-        let cup = practice.cutCup()
+        var cup = practice.cutCup()
+        // 音はファイルに移し、杯の記録（cups.json）には入れない。送れたら消す
+        if let wav = cup.audioWAV {
+            cup.audioFilename = store.saveAudio(wav, for: cup.id)
+            cup.audioWAV = nil
+        }
         store.add(cup)
         capturing = cup
     }

@@ -24,14 +24,18 @@ final class PracticeSession: ObservableObject {
     /// 前回区切ってからのフレーム。帯域エネルギーだけで音声は含まない（30 秒で 300 個）
     private var frames: [BandFrame] = []
     private var endDetector = SteamEndDetector()
+    /// 前回区切ってからの音（16 kHz 前後・16 bit）。区切ったらスチーム区間の前後だけを切り出して送り、捨てる（D21）
+    private var audio: [Int16] = []
+    /// 5 分を超えて捨てた音のサンプル数（包絡の位置と音の位置を合わせるため）
+    private var audioDropped = 0
     /// 判定の閾値。練習の開始時にサーバーの今の版を取りに行く（取れなければ既定値）
     private var thresholds = FeatureThresholds()
     @Published private(set) var paramsVersion: Int?
     private var interruptionObserver: NSObjectProtocol?
 
     init() {
-        capture.onFrames = { [weak self] frames in
-            Task { @MainActor in self?.consume(frames) }
+        capture.onFrames = { [weak self] frames, audio in
+            Task { @MainActor in self?.consume(frames, audio: audio) }
         }
         interruptionObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.interruptionNotification, object: nil, queue: .main
@@ -95,14 +99,29 @@ final class PracticeSession: ObservableObject {
                          "transition": start + f.transitionAt * f.steamDurationSec,
                          "steam_end": Double(range.upperBound) * BandAnalyzer.frameDuration]
         }
+        // スチーム区間の前後10秒だけの音を切り出す。区間が見つからなければ音は送らない（会話が入りやすい時間を送らない）
+        if features != nil, let range = FeatureExtractor.longestSteamRange(frames: frames, background: background, thresholds: thresholds) {
+            let pad = Int(10 / BandAnalyzer.frameDuration)
+            let lo = max(0, range.lowerBound - pad), hi = min(frames.count, range.upperBound + pad)
+            let perFrame = capture.audioRate * BandAnalyzer.frameDuration
+            let a = max(0, min(audio.count, Int(Double(lo) * perFrame) - audioDropped))
+            let b = max(0, min(audio.count, Int(Double(hi) * perFrame) - audioDropped))
+            if b > a {
+                cup.audioWAV = WAV.encode(Array(audio[a..<b]), sampleRate: Int(capture.audioRate))
+                cup.audioStartSec = Double(a + audioDropped) / capture.audioRate
+                cup.background = background
+            }
+        }
         frames = []
+        audio = []
+        audioDropped = 0
         endDetector.reset()
         steamDetected = false
         cupStartedAt = Date()
         return cup
     }
 
-    private func consume(_ new: [BandFrame]) {
+    private func consume(_ new: [BandFrame], audio newAudio: [Int16]) {
         switch phase {
         case .idle:
             return
@@ -115,8 +134,20 @@ final class PracticeSession: ObservableObject {
             }
         case .listening:
             frames += new
-            // 区切り忘れで際限なく溜まらないよう、直近 10 分に留める
-            if frames.count > 6000 { frames.removeFirst(frames.count - 6000) }
+            audio += newAudio
+            // 区切り忘れで際限なく溜まらないよう、直近 10 分に留める（音も同じ長さだけ落とす）
+            if frames.count > 6000 {
+                let drop = frames.count - 6000
+                frames.removeFirst(drop)
+                audio.removeFirst(min(audio.count, Int(Double(drop) * BandAnalyzer.frameDuration * capture.audioRate)))
+            }
+            // 音は直近 5 分だけ持つ（48 kHz・16 bit で約 29 MB）。区切りは普通それより早い
+            let maxAudio = Int(300 * capture.audioRate)
+            if audio.count > maxAudio {
+                let drop = audio.count - maxAudio
+                audio.removeFirst(drop)
+                audioDropped += drop
+            }
             for f in new where endDetector.feed(f, background: background) {
                 steamDetected = true
                 Notifier.steamEnded()

@@ -43,6 +43,14 @@ struct Cup: Codable, Identifiable, Equatable {
     var marks: [String: Double]?
     /// この杯を測った判定の版（サーバーの GET /params）。取れなかったときは nil（既定値で測った）
     var paramsVersion: Int?
+    /// 送る前の音（WAV）。メモリにだけ持ち、保存先は CupStore が決める（cups.json には入れない）
+    var audioWAV: Data? = nil
+    /// 端末に一時保存した音のファイル名。送れたら消す
+    var audioFilename: String?
+    /// 音の先頭が、包絡の先頭から何秒後か（marks と合わせるため）
+    var audioStartSec: Double?
+    /// 練習の開始時に測った背景音（帯域エネルギーの合計）。サーバーで判定を当て直すときに同じ値を使う
+    var background: Float?
     var selfRating: SelfRating?
     var photoFilename: String?
     var status: Status = .awaitingPhoto

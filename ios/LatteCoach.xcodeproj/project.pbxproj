@@ -20,6 +20,7 @@
 		C6A6C1234162C9F8249938E6 /* CoachNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6F4968D9462B1446C849AD /* CoachNotesView.swift */; };
 		DCD4114858257CB86282237A /* CupSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CB8DF89C8E1495A0301CC91 /* CupSender.swift */; };
 		DD7D0028704132727364AA2B /* CupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A8884406A945E98C02DC2D /* CupStore.swift */; };
+		E0CE1335E063810039F728AE /* WAV.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D31D0ADED4F23F0F8F0EE2 /* WAV.swift */; };
 		F166C1C4B10718980C877911 /* FeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3BCDDED5695DEDC1A0C43FC /* FeatureExtractor.swift */; };
 		F6291AD0F5447857263923BB /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9172F4775196C94ACDAE42 /* CameraPicker.swift */; };
 /* End PBXBuildFile section */
@@ -46,6 +47,7 @@
 		816F13A59171D6F4C1FF8E35 /* PracticeSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PracticeSession.swift; sourceTree = "<group>"; };
 		82ED3D9D91CCD68ED6154292 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		95483A7884EE2C8FF6C21E58 /* LatteCoach.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LatteCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6D31D0ADED4F23F0F8F0EE2 /* WAV.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WAV.swift; sourceTree = "<group>"; };
 		B117DEC7A60790DBA70A2303 /* LatteCoachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatteCoachApp.swift; sourceTree = "<group>"; };
 		BF6F4968D9462B1446C849AD /* CoachNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachNotesView.swift; sourceTree = "<group>"; };
 		C3BCDDED5695DEDC1A0C43FC /* FeatureExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractor.swift; sourceTree = "<group>"; };
@@ -97,6 +99,7 @@
 			children = (
 				DABB90288C9246A9DFE8FB21 /* AudioCapture.swift */,
 				C3BCDDED5695DEDC1A0C43FC /* FeatureExtractor.swift */,
+				A6D31D0ADED4F23F0F8F0EE2 /* WAV.swift */,
 			);
 			path = Audio;
 			sourceTree = "<group>";
@@ -258,6 +261,7 @@
 				495060FFD386B1D1AF3AC3BC /* LatteCoachApp.swift in Sources */,
 				8BB5D7D26E2A3A3F4648CAC2 /* Notifier.swift in Sources */,
 				C29D2D45A85424E2CD1AA909 /* PracticeSession.swift in Sources */,
+				E0CE1335E063810039F728AE /* WAV.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
