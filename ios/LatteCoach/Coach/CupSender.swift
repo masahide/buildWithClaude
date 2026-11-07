@@ -18,11 +18,11 @@ final class CupSender {
         store.update(id) { $0.status = .sending; $0.errorMessage = nil }
         do {
             let photo = cup.photoFilename.flatMap(store.photoData)
-            let audio = cup.audioFilename.flatMap(store.fileData)
+            let audio = cup.audioPath.flatMap(store.audioData)
             let serverId = try await client.submit(cup: cup, photo: photo, audio: audio)
             // 音はサーバー（自宅の Mac）に渡ったので端末からは消す（D21）
-            if let f = cup.audioFilename { store.deleteFile(f) }
-            store.update(id) { $0.serverId = serverId; $0.status = .diagnosing; $0.audioFilename = nil }
+            if let f = cup.audioPath { store.deleteAudio(f) }
+            store.update(id) { $0.serverId = serverId; $0.status = .diagnosing; $0.audioPath = nil }
             try await poll(client: client, id: id, serverId: serverId)
         } catch {
             store.update(id) { $0.status = .failed; $0.errorMessage = error.localizedDescription }

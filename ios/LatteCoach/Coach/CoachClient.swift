@@ -28,9 +28,12 @@ struct CoachClient {
         let paramsVersion: Int?
         let audioStartSec: Double?
         let background: Float?
+        let practiceId: UUID?
+        let segmentSeq: Int?
         enum CodingKeys: String, CodingKey {
             case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating", envelope, marks
             case paramsVersion = "params_version", audioStartSec = "audio_start_sec", background
+            case practiceId = "practice_id", segmentSeq = "segment_seq"
         }
     }
 
@@ -54,7 +57,7 @@ struct CoachClient {
         let meta = Meta(startedAt: cup.startedAt, endedAt: cup.endedAt, features: cup.features,
                         selfRating: cup.selfRating?.rawValue, envelope: cup.envelope, marks: cup.marks,
                         paramsVersion: cup.paramsVersion, audioStartSec: cup.audioStartSec,
-                        background: cup.background)
+                        background: cup.background, practiceId: cup.practiceId, segmentSeq: cup.segmentSeq)
         part("meta", type: "application/json", data: try JSONEncoder.iso.encode(meta))
         if let photo { part("photo", filename: "pitcher.jpg", type: "image/jpeg", data: photo) }
         if let audio { part("audio", filename: "steam.wav", type: "audio/wav", data: audio) }
@@ -63,7 +66,7 @@ struct CoachClient {
         var req = URLRequest(url: baseURL.appendingPathComponent("cups"))
         req.httpMethod = "POST"
         // サーバーが止まっているときに「送信中」で長く待たせない
-        req.timeoutInterval = 60  // 音（1〜3 MB）を含むので少し長め
+        req.timeoutInterval = 300  // 前回の区切りからの音を全部含む（数分で数十 MB）
         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         let (data, response) = try await URLSession.shared.upload(for: req, from: body)
         try Self.check(response, data)
@@ -94,6 +97,21 @@ struct CoachClient {
         allowed.remove(charactersIn: "&=+")
         req.httpBody = "text=\(text.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")".data(using: .utf8)
         let (data, response) = try await URLSession.shared.data(for: req)
+        try Self.check(response, data)
+    }
+
+    /// 杯につかない練習の音（終了時の最後の区間）を送る
+    func uploadPracticeAudio(practiceId: UUID, seq: Int, audio: Data) async throws {
+        let boundary = "lattecoach-\(UUID().uuidString)"
+        var body = Data()
+        body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"audio\"; filename=\"tail.wav\"\r\nContent-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        body.append(audio)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        var req = URLRequest(url: baseURL.appendingPathComponent("practices/\(practiceId.uuidString)/audio/\(seq)"))
+        req.httpMethod = "POST"
+        req.timeoutInterval = 300
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        let (data, response) = try await URLSession.shared.upload(for: req, from: body)
         try Self.check(response, data)
     }
 

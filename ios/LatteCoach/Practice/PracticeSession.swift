@@ -24,10 +24,16 @@ final class PracticeSession: ObservableObject {
     /// 前回区切ってからのフレーム。帯域エネルギーだけで音声は含まない（30 秒で 300 個）
     private var frames: [BandFrame] = []
     private var endDetector = SteamEndDetector()
-    /// 前回区切ってからの音（16 kHz 前後・16 bit）。区切ったらスチーム区間の前後だけを切り出して送り、捨てる（D21）
-    private var audio: [Int16] = []
-    /// 5 分を超えて捨てた音のサンプル数（包絡の位置と音の位置を合わせるため）
-    private var audioDropped = 0
+    /// 練習の音は、開始から終了まで全部をファイルに書き続け、区切るたびにその区間をサーバーへ送る（D21）。
+    /// サーバーで何度でもスチームを切り出し直し、絵を描き直せるように、端末では何も削らない
+    private(set) var practiceId = UUID()
+    private var segment: WAVWriter?
+    private var segmentSeq = 0
+    /// 開始からの通しのサンプル番号（今の区間の先頭、書いた合計）と、frames[0] の通しのフレーム番号
+    private var segmentStartSample = 0
+    private var totalSamples = 0
+    private var framesStartFrame = 0
+    private var frameCounter = 0
     /// 判定の閾値。練習の開始時にサーバーの今の版を取りに行く（取れなければ既定値）
     private var thresholds = FeatureThresholds()
     @Published private(set) var paramsVersion: Int?
@@ -65,21 +71,66 @@ final class PracticeSession: ObservableObject {
         endDetector = SteamEndDetector(thresholds: thresholds)
         calibration = []
         frames = []
+        practiceId = UUID()
+        segmentSeq = 0
+        segmentStartSample = 0
+        totalSamples = 0
+        framesStartFrame = 0
+        frameCounter = 0
         endDetector.reset()
         steamDetected = false
         cupStartedAt = Date()
         do {
             try capture.start()
+            try openSegment()
             phase = .calibrating
         } catch {
             errorMessage = "録音を開始できません: \(error.localizedDescription)"
         }
     }
 
+    /// 練習を終える。最後の区間の音をサーバーへ送る（杯にはつかない）
     func stop() {
         capture.stop()
         phase = .idle
         frames = []
+        if let tail = closeSegment() {
+            Task.detached { await PracticeSession.uploadTail(tail) }
+        }
+    }
+
+    struct Segment: Sendable {
+        let url: URL
+        let practiceId: UUID
+        let seq: Int
+        let sampleRate: Int
+    }
+
+    private func openSegment() throws {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Audio", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("\(practiceId.uuidString)-\(String(format: "%03d", segmentSeq)).wav")
+        segment = try WAVWriter(url: url, sampleRate: Int(capture.audioRate))
+        segmentStartSample = totalSamples
+    }
+
+    /// 今の区間を閉じて返し、次の区間を始める
+    private func closeSegment(reopen: Bool = false) -> Segment? {
+        guard let w = segment else { return nil }
+        w.close()
+        let s = Segment(url: w.url, practiceId: practiceId, seq: segmentSeq, sampleRate: w.sampleRate)
+        segment = nil
+        segmentSeq += 1
+        if reopen { try? openSegment() }
+        return s
+    }
+
+    private static func uploadTail(_ s: Segment) async {
+        guard let client = CoachClient.fromBundle(), let data = try? Data(contentsOf: s.url) else { return }
+        if (try? await client.uploadPracticeAudio(practiceId: s.practiceId, seq: s.seq, audio: data)) != nil {
+            try? FileManager.default.removeItem(at: s.url)
+        }
     }
 
     /// 今の杯を区切り、特徴量を計算して返す。区間が見つからなければ features は nil。
@@ -99,22 +150,19 @@ final class PracticeSession: ObservableObject {
                          "transition": start + f.transitionAt * f.steamDurationSec,
                          "steam_end": Double(range.upperBound) * BandAnalyzer.frameDuration]
         }
-        // スチーム区間の前後10秒だけの音を切り出す。区間が見つからなければ音は送らない（会話が入りやすい時間を送らない）
-        if features != nil, let range = FeatureExtractor.longestSteamRange(frames: frames, background: background, thresholds: thresholds) {
-            let pad = Int(10 / BandAnalyzer.frameDuration)
-            let lo = max(0, range.lowerBound - pad), hi = min(frames.count, range.upperBound + pad)
+        // 前回の区切りからの音を全部この杯につけて送る（スチームの切り出しはサーバーで何度でもやり直せる）
+        let lastSegmentStart = segmentStartSample
+        if let seg = closeSegment(reopen: true) {
+            cup.audioPath = seg.url.lastPathComponent
+            cup.practiceId = seg.practiceId
+            cup.segmentSeq = seg.seq
+            // 音の先頭が、包絡（frames）の先頭から何秒後か。最初の杯は背景を測った時間を含むので負になる
             let perFrame = capture.audioRate * BandAnalyzer.frameDuration
-            let a = max(0, min(audio.count, Int(Double(lo) * perFrame) - audioDropped))
-            let b = max(0, min(audio.count, Int(Double(hi) * perFrame) - audioDropped))
-            if b > a {
-                cup.audioWAV = WAV.encode(Array(audio[a..<b]), sampleRate: Int(capture.audioRate))
-                cup.audioStartSec = Double(a + audioDropped) / capture.audioRate
-                cup.background = background
-            }
+            cup.audioStartSec = (Double(lastSegmentStart) - Double(framesStartFrame) * perFrame) / capture.audioRate
+            cup.background = background
         }
         frames = []
-        audio = []
-        audioDropped = 0
+        framesStartFrame = frameCounter
         endDetector.reset()
         steamDetected = false
         cupStartedAt = Date()
@@ -122,6 +170,11 @@ final class PracticeSession: ObservableObject {
     }
 
     private func consume(_ new: [BandFrame], audio newAudio: [Int16]) {
+        if phase != .idle {
+            segment?.append(newAudio)
+            totalSamples += newAudio.count
+            frameCounter += new.count
+        }
         switch phase {
         case .idle:
             return
@@ -133,20 +186,13 @@ final class PracticeSession: ObservableObject {
                 phase = .listening
             }
         case .listening:
+            if frames.isEmpty { framesStartFrame = frameCounter - new.count }
             frames += new
-            audio += newAudio
-            // 区切り忘れで際限なく溜まらないよう、直近 10 分に留める（音も同じ長さだけ落とす）
+            // 区切り忘れで際限なく溜まらないよう、包絡は直近 10 分に留める（音はファイルに全部残る）
             if frames.count > 6000 {
                 let drop = frames.count - 6000
                 frames.removeFirst(drop)
-                audio.removeFirst(min(audio.count, Int(Double(drop) * BandAnalyzer.frameDuration * capture.audioRate)))
-            }
-            // 音は直近 5 分だけ持つ（48 kHz・16 bit で約 29 MB）。区切りは普通それより早い
-            let maxAudio = Int(300 * capture.audioRate)
-            if audio.count > maxAudio {
-                let drop = audio.count - maxAudio
-                audio.removeFirst(drop)
-                audioDropped += drop
+                framesStartFrame += drop
             }
             for f in new where endDetector.feed(f, background: background) {
                 steamDetected = true

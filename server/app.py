@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import os
 import logging
 import time
 import uuid
@@ -28,6 +29,19 @@ import sound_picture
 log = logging.getLogger("uvicorn.error")
 DATA = Path(__file__).parent / "data" / "cups"
 DATA.mkdir(parents=True, exist_ok=True)
+# 練習の音を通しで置く（D21）。practices/<練習ID>/<区間番号>.wav。杯の区間は杯のフォルダにも同じものを置く
+PRACTICES = Path(__file__).parent / "data" / "practices"
+PRACTICES.mkdir(parents=True, exist_ok=True)
+
+
+def _practice_path(practice_id: str, seq: int) -> Path:
+    try:
+        uuid.UUID(practice_id)
+    except ValueError:
+        raise HTTPException(400, "bad practice id")
+    d = PRACTICES / practice_id
+    d.mkdir(exist_ok=True)
+    return d / f"{int(seq):03d}.wav"
 
 app = FastAPI(title="Steam Coach")
 
@@ -126,6 +140,14 @@ def teach(text: str = Form(...)) -> dict:
     return {"ok": True}
 
 
+@app.post("/practices/{practice_id}/audio/{seq}")
+async def practice_audio(practice_id: str, seq: int, audio: UploadFile = File(...)) -> dict:
+    """杯につかない練習の音（終了時の最後の区間）。練習の音を通しで残すため"""
+    p = _practice_path(practice_id, seq)
+    p.write_bytes(await audio.read())
+    return {"ok": True, "path": f"{practice_id}/{p.name}"}
+
+
 @app.get("/params")
 def get_params() -> dict:
     """アプリが練習の開始時に取りに来る判定の閾値（今の版）"""
@@ -211,8 +233,12 @@ async def create_cup(background: BackgroundTasks, meta: str = Form(...),
     if photo is not None:
         (d / "photo.jpg").write_bytes(await photo.read())
     if audio is not None:
-        # スチーム区間の前後だけの音。自宅のこの Mac にだけ置き、Claude には渡さない（D21）
+        # 前回の区切りからこの杯までの音を全部。自宅のこの Mac にだけ置き、Claude には渡さない（D21）
         (d / "audio.wav").write_bytes(await audio.read())
+        if meta_obj.get("practice_id") is not None and meta_obj.get("segment_seq") is not None:
+            p = _practice_path(meta_obj["practice_id"], meta_obj["segment_seq"])
+            if not p.exists():
+                os.link(d / "audio.wav", p)  # 同じ中身をハードリンクで置く（容量を食わない）
     _write(d / "status.json", {"status": "diagnosing", "received_at": datetime.now().isoformat()})
     background.add_task(_run, cup_id)
     return {"cup_id": cup_id}

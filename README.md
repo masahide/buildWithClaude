@@ -10,7 +10,7 @@
 
 ## 構成
 
-iOS ネイティブアプリ＋薄いサーバー＋Claude Managed Agents。生の音声は家の外に出さない。iPhone はスチーム区間の前後だけの音を自宅の Mac のサーバーに送り、サーバーで何度でも測り直せるようにする。Claude には音そのものではなく、音から作った数値とスペクトログラムの画像、ピッチャーの残りの写真を渡す（[decisions.md D21](docs/project/decisions.md)）。詳細は [docs/project/architecture.md](docs/project/architecture.md)。
+iOS ネイティブアプリ＋薄いサーバー＋Claude Managed Agents。生の音声は家の外に出さない。iPhone は練習の音を全部、自宅の Mac のサーバーに送り、サーバーで何度でもスチームを切り出し直し、測り直し、絵を描き直せるようにする。Claude には音そのものではなく、音から作った数値とスペクトログラムの画像、ピッチャーの残りの写真を渡す（[decisions.md D21](docs/project/decisions.md)）。詳細は [docs/project/architecture.md](docs/project/architecture.md)。
 
 ## セットアップ
 

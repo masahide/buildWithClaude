@@ -43,23 +43,17 @@ final class CupStore: ObservableObject {
         }
     }
 
-    /// 送る前の音を一時保存する（送れたら deleteFile で消す）
-    func saveAudio(_ data: Data, for id: UUID) -> String? {
-        let name = "\(id.uuidString).wav"
-        do {
-            try data.write(to: dir.appendingPathComponent(name))
-            return name
-        } catch {
-            return nil
-        }
+    /// 練習の音の区間（PracticeSession が Documents/Audio に書く）
+    private var audioDir: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Audio")
     }
 
-    func fileData(_ filename: String) -> Data? {
-        try? Data(contentsOf: dir.appendingPathComponent(filename))
+    func audioData(_ name: String) -> Data? {
+        try? Data(contentsOf: audioDir.appendingPathComponent(name))
     }
 
-    func deleteFile(_ filename: String) {
-        try? FileManager.default.removeItem(at: dir.appendingPathComponent(filename))
+    func deleteAudio(_ name: String) {
+        try? FileManager.default.removeItem(at: audioDir.appendingPathComponent(name))
     }
 
     func photoData(_ filename: String) -> Data? {

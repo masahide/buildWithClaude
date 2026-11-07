@@ -11,6 +11,7 @@
 		495060FFD386B1D1AF3AC3BC /* LatteCoachApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B117DEC7A60790DBA70A2303 /* LatteCoachApp.swift */; };
 		4C92D731FCE4FB44EFB320A5 /* CoachClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4B3E48C7962147F56B4E90 /* CoachClient.swift */; };
 		50CFD5EA743741A8B0AA2B7B /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABB90288C9246A9DFE8FB21 /* AudioCapture.swift */; };
+		5A3EC2C99EBC1BEA02D3AC42 /* WAVTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3048E7669C628243535ECE51 /* WAVTests.swift */; };
 		63961A0F96C06E51E1FE25E7 /* CupCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48A1FB9D9BBC489C636B7FE /* CupCaptureView.swift */; };
 		8BB5D7D26E2A3A3F4648CAC2 /* Notifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5E31EA53BDBC47E4C32D019 /* Notifier.swift */; };
 		A82EDA3592D4049053AC03B0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F96119FA7D2EC933EC94830 /* ContentView.swift */; };
@@ -41,6 +42,7 @@
 		0F96119FA7D2EC933EC94830 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		1CB8DF89C8E1495A0301CC91 /* CupSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CupSender.swift; sourceTree = "<group>"; };
 		1FE442BEA1F137C362811F41 /* FeatureExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractorTests.swift; sourceTree = "<group>"; };
+		3048E7669C628243535ECE51 /* WAVTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WAVTests.swift; sourceTree = "<group>"; };
 		49A8884406A945E98C02DC2D /* CupStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CupStore.swift; sourceTree = "<group>"; };
 		5B9172F4775196C94ACDAE42 /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
 		77E8B436523D4A695283459A /* SyntheticSteam.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticSteam.swift; sourceTree = "<group>"; };
@@ -64,6 +66,7 @@
 			children = (
 				1FE442BEA1F137C362811F41 /* FeatureExtractorTests.swift */,
 				77E8B436523D4A695283459A /* SyntheticSteam.swift */,
+				3048E7669C628243535ECE51 /* WAVTests.swift */,
 			);
 			path = LatteCoachTests;
 			sourceTree = "<group>";
@@ -241,6 +244,7 @@
 			files = (
 				03C8E5A10CBCD0F798FE16BD /* FeatureExtractorTests.swift in Sources */,
 				B7E41E5A2A3787518E152C76 /* SyntheticSteam.swift in Sources */,
+				5A3EC2C99EBC1BEA02D3AC42 /* WAVTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
