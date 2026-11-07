@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Literal, Optional
 
 import anthropic
+
+import memory
 from pydantic import BaseModel, Field
 
 MODEL = os.environ.get("COACH_MODEL", "claude-opus-5-5")
@@ -205,6 +207,9 @@ def _diagnose_managed(content: list[dict]) -> Diagnosis:
         agent={"type": "agent", "id": ids["agent_id"], "version": ids["agent_version"]},
         environment_id=ids["environment_id"],
         title="1杯の診断",
+        resources=[memory.resource(client, "read_only",
+                                   "この人の記憶。診断の前に /profile.md・/reading.md・/rules.md・/today.md を読み、"
+                                   "この人のやり方と、これまでに分かったことを踏まえて診断する。")],
     )
     texts: list[str] = []
     with client.beta.sessions.events.stream(session_id=session.id) as stream:

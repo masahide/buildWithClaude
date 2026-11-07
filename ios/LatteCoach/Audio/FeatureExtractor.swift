@@ -53,6 +53,24 @@ struct CupFeatures: Codable, Equatable {
     }
 }
 
+extension CupFeatures {
+    /// 11-07 より前の版で保存した杯には、キュルルル・泡入れの区間の値がない。読めなくならないよう 0 で埋める
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        steamDurationSec = try c.decode(Double.self, forKey: .steamDurationSec)
+        startSquealSec = try c.decodeIfPresent(Double.self, forKey: .startSquealSec) ?? 0
+        airPhaseRatio = try c.decode(Double.self, forKey: .airPhaseRatio)
+        firstAirSec = try c.decodeIfPresent(Double.self, forKey: .firstAirSec) ?? 0
+        reAirCount = try c.decodeIfPresent(Int.self, forKey: .reAirCount) ?? 0
+        reAirSec = try c.decodeIfPresent(Double.self, forKey: .reAirSec) ?? 0
+        transitionAt = try c.decode(Double.self, forKey: .transitionAt)
+        stirStability = try c.decode(Double.self, forKey: .stirStability)
+        stirLowBandRatio = try c.decode(Double.self, forKey: .stirLowBandRatio)
+        burstCount = try c.decode(Int.self, forKey: .burstCount)
+        levelOverBackgroundDb = try c.decode(Double.self, forKey: .levelOverBackgroundDb)
+    }
+}
+
 /// 帯域エネルギーの計算（サンプル列 → 0.1 秒ごとの BandFrame）。
 final class BandAnalyzer {
     static let frameDuration = 0.1

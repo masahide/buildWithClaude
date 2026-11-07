@@ -17,6 +17,7 @@
 		A89EAC4E9530F17541AE51E6 /* Cup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3225C3A254CE3CF737B0190 /* Cup.swift */; };
 		B7E41E5A2A3787518E152C76 /* SyntheticSteam.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77E8B436523D4A695283459A /* SyntheticSteam.swift */; };
 		C29D2D45A85424E2CD1AA909 /* PracticeSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 816F13A59171D6F4C1FF8E35 /* PracticeSession.swift */; };
+		C6A6C1234162C9F8249938E6 /* CoachNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF6F4968D9462B1446C849AD /* CoachNotesView.swift */; };
 		DCD4114858257CB86282237A /* CupSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CB8DF89C8E1495A0301CC91 /* CupSender.swift */; };
 		DD7D0028704132727364AA2B /* CupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A8884406A945E98C02DC2D /* CupStore.swift */; };
 		F166C1C4B10718980C877911 /* FeatureExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3BCDDED5695DEDC1A0C43FC /* FeatureExtractor.swift */; };
@@ -46,6 +47,7 @@
 		82ED3D9D91CCD68ED6154292 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		95483A7884EE2C8FF6C21E58 /* LatteCoach.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LatteCoach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B117DEC7A60790DBA70A2303 /* LatteCoachApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LatteCoachApp.swift; sourceTree = "<group>"; };
+		BF6F4968D9462B1446C849AD /* CoachNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachNotesView.swift; sourceTree = "<group>"; };
 		C3BCDDED5695DEDC1A0C43FC /* FeatureExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureExtractor.swift; sourceTree = "<group>"; };
 		C4FE27B71521694510D565D9 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		D3225C3A254CE3CF737B0190 /* Cup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cup.swift; sourceTree = "<group>"; };
@@ -121,6 +123,7 @@
 		C49C827AAB0C8D6BDEE72CB8 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				BF6F4968D9462B1446C849AD /* CoachNotesView.swift */,
 				0F96119FA7D2EC933EC94830 /* ContentView.swift */,
 				D48A1FB9D9BBC489C636B7FE /* CupCaptureView.swift */,
 			);
@@ -245,6 +248,7 @@
 				50CFD5EA743741A8B0AA2B7B /* AudioCapture.swift in Sources */,
 				F6291AD0F5447857263923BB /* CameraPicker.swift in Sources */,
 				4C92D731FCE4FB44EFB320A5 /* CoachClient.swift in Sources */,
+				C6A6C1234162C9F8249938E6 /* CoachNotesView.swift in Sources */,
 				A82EDA3592D4049053AC03B0 /* ContentView.swift in Sources */,
 				A89EAC4E9530F17541AE51E6 /* Cup.swift in Sources */,
 				63961A0F96C06E51E1FE25E7 /* CupCaptureView.swift in Sources */,

@@ -63,6 +63,20 @@ struct CoachClient {
         return try JSONDecoder().decode(Created.self, from: data).cup_id
     }
 
+    /// コーチの記憶（夜の振り返りが書く）。マークダウンの文字列のまま返す
+    struct Notes: Decodable, Equatable {
+        var today: String
+        var rules: String
+        var reading: String
+        var tendencies: String
+    }
+
+    func notes() async throws -> Notes {
+        let (data, response) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("coach"))
+        try Self.check(response, data)
+        return try JSONDecoder().decode(Notes.self, from: data)
+    }
+
     func status(of serverId: String) async throws -> CupStatus {
         let (data, response) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("cups/\(serverId)"))
         try Self.check(response, data)

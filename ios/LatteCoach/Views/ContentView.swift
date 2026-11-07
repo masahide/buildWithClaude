@@ -5,11 +5,13 @@ struct ContentView: View {
     @EnvironmentObject private var store: CupStore
     @EnvironmentObject private var sender: CupSenderBox
     @State private var capturing: Cup?
+    @StateObject private var notes = CoachNotesModel()
 
     var body: some View {
         NavigationStack {
             List {
                 Section { PracticeControls(onCut: cut) }
+                CoachNotesSection(model: notes)
                 Section("杯") {
                     if store.cups.isEmpty {
                         Text("まだ杯がありません").foregroundStyle(.secondary)
@@ -22,6 +24,8 @@ struct ContentView: View {
             .navigationTitle("スチームコーチ")
             .sheet(item: $capturing) { cup in CupCaptureView(cup: cup) }
             .task { await sender.sender.resumePending() }
+            .task { await notes.refresh() }
+            .refreshable { await notes.refresh() }
             .alert("エラー", isPresented: Binding(get: { practice.errorMessage != nil },
                                                 set: { if !$0 { practice.errorMessage = nil } })) {
                 Button("OK", role: .cancel) {}
@@ -106,8 +110,10 @@ private struct CupRow: View {
                 Text("次の1杯: \(d.fix)")
                 Text("起きるはずの変化: \(d.prediction)").foregroundStyle(.secondary)
             } else if let f = cup.features {
-                Text(String(format: "スチーム %.0f秒・エア入れ %.0f%%・破裂音 %d回",
-                            f.steamDurationSec, f.airPhaseRatio * 100, f.burstCount))
+                Text(String(format: "スチーム %.0f秒・泡入れ %.0f秒%@・ゴボゴボ %d回",
+                            f.steamDurationSec, f.firstAirSec,
+                            f.reAirCount > 0 ? String(format: "＋追加 %d回 %.0f秒", f.reAirCount, f.reAirSec) : "",
+                            f.burstCount))
                     .font(.caption).monospacedDigit()
             } else {
                 Text("スチーム区間が見つかりませんでした").font(.caption).foregroundStyle(.secondary)

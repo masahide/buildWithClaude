@@ -20,6 +20,8 @@ from typing import Optional
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 
 import coach
+import memory
+import review
 
 log = logging.getLogger("uvicorn.error")
 DATA = Path(__file__).parent / "data" / "cups"
@@ -79,6 +81,36 @@ def _run(cup_id: str) -> None:
     status["elapsed_sec"] = round(time.monotonic() - started, 2)
     log.info("cup %s %s in %.1fs", cup_id, status["status"], status["elapsed_sec"])
     _write(d / "status.json", status)
+
+
+@app.get("/coach")
+def coach_notes() -> dict:
+    """アプリに見せるコーチの記憶（今日のテーマ、あなたの正解、コーチが学んだこと）"""
+    import anthropic
+    notes = memory.read_all(anthropic.Anthropic())
+    return {"today": notes.get("/today.md", ""), "rules": notes.get("/rules.md", ""),
+            "reading": notes.get("/reading.md", ""), "tendencies": notes.get("/tendencies.md", "")}
+
+
+@app.post("/review", status_code=202)
+def start_review(background: BackgroundTasks, day: Optional[str] = None) -> dict:
+    """夜の振り返りを裏で回す。結果は data/reviews/ に残る"""
+    from datetime import date
+    d = date.fromisoformat(day) if day else date.today()
+
+    def job() -> None:
+        out = DATA.parent / "reviews"
+        out.mkdir(exist_ok=True)
+        try:
+            result = review.run(d)
+        except Exception as e:
+            log.exception("review failed")
+            result = {"day": d.isoformat(), "error": str(e)}
+        (out / f"{d.isoformat()}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
+        log.info("review %s done", d.isoformat())
+
+    background.add_task(job)
+    return {"day": d.isoformat(), "status": "started"}
 
 
 @app.get("/health")
