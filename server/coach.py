@@ -58,7 +58,17 @@ SYSTEM = """あなたは家庭でラテアートを練習する人のための�
 - stir_low_band_ratio: 撹拌相の低域の割合。高いとノズルが深すぎる疑い
 - burst_count: 撹拌相で中域が急に大きくなった回数（ゴボゴボ）。多いと渦ができていない疑い
 - level_over_background_db: 背景音に対する音量。置き場所の目安で、診断の根拠にはしない
-判定は本人の録音1本で合わせた暫定値なので、数値は杯どうしの比較として読むこと。11-06 より前の杯は判定の方法が違うため、数値を直接比べない。
+判定は本人の録音1本で合わせた暫定値なので、数値は杯どうしの比較として読むこと。
+
+音の絵（今回の杯と、あれば前の杯）が添付されることがある。端末が送った帯域ごとの音量（背景音比 dB）を描いたもので、音声そのものではない。
+- 上段: 低 50-400Hz（実線）、中 400-2kHz（破線）、高 2-8kHz（一点鎖線）、最高 4-8kHz（点線。撹拌中のチリチリが短い山として出る）
+- 下段: 音量の揺れ。泡入れ（ジュルジュル）の間は大きく、渦に入ると小さくなる
+- 紫の縦線: アプリの判定の境（始まり、キュルルル終わり、渦へ、止めた）
+- 判定と診断の根拠は数値を正とする。絵は、数値に出ない形を読む補助に使う（例: 泡入れがいつ・どのくらい急に収まったか、
+  撹拌中のチリチリやゴボゴボの山がどこに集まるか、低域が途中から上がるか）。絵を根拠にするときは、何秒あたりの何を見たかを書く
+- 始めの甲高い大きな山はキュルルルで、泡入れではない。絵だけで泡入れと読まない
+- 前の杯の予測の当否は、まず数値で、次に2枚の絵の違いで確かめる
+- 紫の線が絵と食い違って見えたら、診断は数値のまま行い、食い違いを judgment_doubt に書く11-06 より前の杯は判定の方法が違うため、数値を直接比べない。
 """
 
 RUBRIC = """# 1杯の診断のルーブリック
@@ -89,6 +99,10 @@ class Diagnosis(BaseModel):
         default=None, description="前の杯の予測の当否（当たった／外れた＋理由）。前の杯がなければ null"
     )
     photo_scores: Optional[PhotoScores] = None
+    sound_observation: Optional[str] = Field(
+        default=None, description="音の絵から読んだ、数値に出ていない形（何秒あたりの何か）。絵がなければ null")
+    judgment_doubt: Optional[str] = Field(
+        default=None, description="アプリの判定の線が絵と食い違って見えた点。なければ null")
 
 
 class CoachError(Exception):
@@ -96,7 +110,8 @@ class CoachError(Exception):
 
 
 def _user_content(features: Optional[dict], self_rating: Optional[str], photo: Optional[bytes],
-                  previous: Optional[dict]) -> list[dict]:
+                  previous: Optional[dict], pictures: Optional[list[tuple[str, bytes]]] = None) -> list[dict]:
+    pictures = pictures or []
     parts: list[str] = []
     if previous:
         parts.append(
@@ -109,10 +124,17 @@ def _user_content(features: Optional[dict], self_rating: Optional[str], photo: O
         parts.append("今回の杯はスチーム区間を検出できなかった。写真だけで診断する。")
     if self_rating:
         parts.append(f"本人の自己評価: {self_rating}")
-    parts.append("写真は添付の1枚（ピッチャーの残り）。" if photo else "写真はない。特徴量だけで診断する。")
+    order = [label for label, _ in pictures] + (["ピッチャーの残りの写真"] if photo else [])
+    if order:
+        parts.append("添付の画像は順に: " + "、".join(f"{i + 1}枚目 {label}" for i, label in enumerate(order)) + "。")
+    if not photo:
+        parts.append("ピッチャーの写真はない。")
     parts.append("診断してください。")
 
     content: list[dict] = []
+    for _, png in pictures:
+        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/png",
+                                                     "data": base64.standard_b64encode(png).decode()}})
     if photo:
         content.append({
             "type": "image",
@@ -124,9 +146,11 @@ def _user_content(features: Optional[dict], self_rating: Optional[str], photo: O
 
 
 def diagnose(features: Optional[dict], self_rating: Optional[str], photo: Optional[bytes],
-             previous: Optional[dict]) -> Diagnosis:
+             previous: Optional[dict], pictures: Optional[list[tuple[str, bytes]]] = None) -> Diagnosis:
     backend = os.environ.get("COACH_BACKEND", "managed")
-    content = _user_content(features, self_rating, photo, previous)
+    if os.environ.get("COACH_SOUND_PICTURE", "1") == "0":
+        pictures = None
+    content = _user_content(features, self_rating, photo, previous, pictures)
     if backend == "managed":
         return _diagnose_managed(content)
     if backend == "fake":
@@ -166,7 +190,8 @@ MANAGED_IDS = Path(__file__).parent / "data" / "managed_ids.json"
 MANAGED_SYSTEM = SYSTEM + """
 最後に次の JSON だけを含むコードブロックを出力する:
 {"process": "エア入れ|撹拌", "fix": "...", "prediction": "...", "evidence": "...",
- "previous_verdict": "..." または null, "photo_scores": {"bubble_size": 0, "firmness": 0, "gloss": 0}}
+ "previous_verdict": "..." または null, "photo_scores": {"bubble_size": 0, "firmness": 0, "gloss": 0},
+ "sound_observation": "..." または null, "judgment_doubt": "..." または null}
 """
 
 

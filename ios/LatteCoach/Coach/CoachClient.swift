@@ -24,8 +24,9 @@ struct CoachClient {
         let features: CupFeatures?
         let selfRating: String?
         let envelope: [[Float]]?
+        let marks: [String: Double]?
         enum CodingKeys: String, CodingKey {
-            case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating", envelope
+            case startedAt = "started_at", endedAt = "ended_at", features, selfRating = "self_rating", envelope, marks
         }
     }
 
@@ -47,7 +48,7 @@ struct CoachClient {
             body.append("\r\n".data(using: .utf8)!)
         }
         let meta = Meta(startedAt: cup.startedAt, endedAt: cup.endedAt, features: cup.features,
-                        selfRating: cup.selfRating?.rawValue, envelope: cup.envelope)
+                        selfRating: cup.selfRating?.rawValue, envelope: cup.envelope, marks: cup.marks)
         part("meta", type: "application/json", data: try JSONEncoder.iso.encode(meta))
         if let photo { part("photo", filename: "pitcher.jpg", type: "image/jpeg", data: photo) }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)

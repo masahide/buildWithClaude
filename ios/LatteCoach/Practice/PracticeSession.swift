@@ -74,7 +74,15 @@ final class PracticeSession: ObservableObject {
         let bg = max(background, 1e-12)
         // 有効数字3桁に丸めて送信量を抑える
         func r(_ v: Float) -> Float { v == 0 ? 0 : Float(String(format: "%.3g", v / bg)) ?? v / bg }
-        cup.envelope = frames.map { [r($0.low), r($0.mid), r($0.high)] }
+        cup.envelope = frames.map { [r($0.low), r($0.mid), r($0.high), r($0.top)] }
+        // 判定の境の位置（包絡の先頭からの秒）。サーバーが音の絵を切り出し、縦線を引くのに使う（sound-picture.md）
+        if let f = features, let range = FeatureExtractor.longestSteamRange(frames: frames, background: background, thresholds: .init()) {
+            let start = Double(range.lowerBound) * BandAnalyzer.frameDuration
+            cup.marks = ["steam_start": start,
+                         "squeal_end": start + f.startSquealSec,
+                         "transition": start + f.transitionAt * f.steamDurationSec,
+                         "steam_end": Double(range.upperBound) * BandAnalyzer.frameDuration]
+        }
         frames = []
         endDetector.reset()
         steamDetected = false

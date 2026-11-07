@@ -6,6 +6,9 @@ struct BandFrame: Codable, Equatable {
     var low: Float   // 50–400 Hz: こもった轟音（ノズルが深すぎる疑い）
     var mid: Float   // 400–2000 Hz: ジュルジュル・ゴボゴボ
     var high: Float  // 2000–8000 Hz: 始めの「キュルルル」、空だし
+    /// 4000–8000 Hz（high の一部）。撹拌中の「チリチリ」がここに短い山として出る（log/2026-11-06）。
+    /// 判定には使わず、包絡としてサーバーとコーチに渡す（decisions.md D19）
+    var top: Float = 0
     var total: Float { low + mid + high }
 }
 
@@ -127,7 +130,7 @@ final class BandAnalyzer {
             guard b > a else { return 0 }
             return vDSP.sum(power[a...b]) / Float(fftSize)
         }
-        return BandFrame(low: band(50, 400), mid: band(400, 2000), high: band(2000, 8000))
+        return BandFrame(low: band(50, 400), mid: band(400, 2000), high: band(2000, 8000), top: band(4000, 8000))
     }
 }
 

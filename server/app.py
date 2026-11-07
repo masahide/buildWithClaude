@@ -22,6 +22,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 import coach
 import memory
 import review
+import sound_picture
 
 log = logging.getLogger("uvicorn.error")
 DATA = Path(__file__).parent / "data" / "cups"
@@ -61,7 +62,7 @@ def _previous_cup(before: str) -> Optional[dict]:
     meta = json.loads((d / "meta.json").read_text())
     s = json.loads((d / "status.json").read_text())
     return {"ended_at": meta.get("ended_at"), "features": meta.get("features"),
-            "self_rating": meta.get("self_rating"), "diagnosis": s.get("diagnosis")}
+            "self_rating": meta.get("self_rating"), "diagnosis": s.get("diagnosis"), "_dir": str(d)}
 
 
 def _run(cup_id: str) -> None:
@@ -72,8 +73,21 @@ def _run(cup_id: str) -> None:
     photo = photo_path.read_bytes() if photo_path.exists() else None
     started = time.monotonic()
     try:
-        result = coach.diagnose(meta.get("features"), meta.get("self_rating"), photo,
-                                _previous_cup(status["received_at"]))
+        previous = _previous_cup(status["received_at"])
+        pictures: list[tuple[str, bytes]] = []
+        prev_png = Path(previous.pop("_dir")) / "sound.png" if previous else None
+        if prev_png and prev_png.exists():
+            pictures.append(("前の杯の音の絵", prev_png.read_bytes()))
+        try:
+            png = sound_picture.draw(meta.get("envelope") or [], meta.get("marks"),
+                                     f"{status['received_at'][:16].replace('T', ' ')} の杯")
+        except Exception:
+            log.exception("sound picture failed: %s", cup_id)
+            png = None
+        if png:
+            (d / "sound.png").write_bytes(png)
+            pictures.append(("今回の杯の音の絵", png))
+        result = coach.diagnose(meta.get("features"), meta.get("self_rating"), photo, previous, pictures)
         status.update(status="done", diagnosis=result.model_dump())
     except Exception as e:  # 失敗はアプリに返して表示する
         log.exception("diagnosis failed: %s", cup_id)
@@ -121,6 +135,16 @@ def start_review(background: BackgroundTasks, day: Optional[str] = None) -> dict
 
     background.add_task(job)
     return {"day": d.isoformat(), "status": "started"}
+
+
+@app.get("/cups/{cup_id}/sound.png")
+def cup_sound(cup_id: str):
+    """杯ごとの音の絵（README・デモ・本人の確認用）"""
+    from fastapi.responses import Response
+    p = _dir(cup_id) / "sound.png"
+    if not p.exists():
+        raise HTTPException(404, "not found")
+    return Response(p.read_bytes(), media_type="image/png")
 
 
 @app.get("/health")
