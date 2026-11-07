@@ -154,6 +154,7 @@ open LatteCoach.xcodeproj
 | [docs/project/overview.md](docs/project/overview.md) | プロダクト概要、誰が何に困っているか、設計原則、工程の区分、ユーザー操作 |
 | [docs/project/architecture.md](docs/project/architecture.md) | 全体構成、iOS アプリ、サーバー、Managed Agents |
 | [docs/project/sound-picture.md](docs/project/sound-picture.md) | 音の絵（スペクトログラム）の設計 |
+| [docs/project/demo.md](docs/project/demo.md) | デモ動画の台本と撮る素材 |
 | [docs/project/plan.md](docs/project/plan.md) | スケジュール、削る順、デモの筋、受け入れ基準 |
 | [docs/project/recording-protocol.md](docs/project/recording-protocol.md) | 検証データの記録手順 |
 | [docs/project/constraints.md](docs/project/constraints.md) | イベント上の制約とその解釈 |
