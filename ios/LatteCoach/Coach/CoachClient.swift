@@ -77,6 +77,18 @@ struct CoachClient {
         return try JSONDecoder().decode(Notes.self, from: data)
     }
 
+    /// 本人がコーチに教える。コーチの記憶（この人の音の読み方）に日付つきで残る
+    func teach(_ text: String) async throws {
+        var req = URLRequest(url: baseURL.appendingPathComponent("teach"))
+        req.httpMethod = "POST"
+        req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&=+")
+        req.httpBody = "text=\(text.addingPercentEncoding(withAllowedCharacters: allowed) ?? "")".data(using: .utf8)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        try Self.check(response, data)
+    }
+
     func status(of serverId: String) async throws -> CupStatus {
         let (data, response) = try await URLSession.shared.data(from: baseURL.appendingPathComponent("cups/\(serverId)"))
         try Self.check(response, data)

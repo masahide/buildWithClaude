@@ -92,6 +92,16 @@ def coach_notes() -> dict:
             "reading": notes.get("/reading.md", ""), "tendencies": notes.get("/tendencies.md", "")}
 
 
+@app.post("/teach")
+def teach(text: str = Form(...)) -> dict:
+    """本人がコーチに教える（例:「27〜32秒は追加の泡入れだった」）。コーチの記憶に日付つきで残る"""
+    import anthropic
+    if not text.strip():
+        raise HTTPException(400, "text is empty")
+    memory.teach(anthropic.Anthropic(), text, datetime.now().strftime("%Y-%m-%d %H:%M"))
+    return {"ok": True}
+
+
 @app.post("/review", status_code=202)
 def start_review(background: BackgroundTasks, day: Optional[str] = None) -> dict:
     """夜の振り返りを裏で回す。結果は data/reviews/ に残る"""

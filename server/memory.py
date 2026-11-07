@@ -68,6 +68,21 @@ def resource(client: anthropic.Anthropic, access: str, instructions: str) -> dic
     return {"type": "memory_store", "memory_store_id": store_id(client), "access": access, "instructions": instructions}
 
 
+def teach(client: anthropic.Anthropic, text: str, when: str) -> None:
+    """本人がコーチに教えたことを /reading.md に日付つきで書き足す。コーチは次の診断から読む"""
+    sid = store_id(client)
+    current = next(m for m in client.beta.memory_stores.memories.list(sid, path_prefix="/", view="full")
+                   if m.type == "memory" and m.path == "/reading.md")
+    head = "## 本人から教わったこと"
+    body = current.content.rstrip()
+    if head not in body:
+        body += f"\n\n{head}\n（コーチの読みより優先する。コーチの読みと食い違えば、こちらが正しい）"
+    body += f"\n- {when}: {text.strip()}\n"
+    client.beta.memory_stores.memories.update(
+        current.id, memory_store_id=sid, content=body,
+        precondition={"type": "content_sha256", "content_sha256": current.content_sha256})
+
+
 def read_all(client: anthropic.Anthropic) -> dict[str, str]:
     """アプリに見せる分を読む（パス → 中身）"""
     sid = store_id(client)

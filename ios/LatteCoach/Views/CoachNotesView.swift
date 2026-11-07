@@ -6,6 +6,18 @@ final class CoachNotesModel: ObservableObject {
     @Published private(set) var notes: CoachClient.Notes?
     @Published private(set) var error: String?
 
+    func teach(_ text: String) async -> Bool {
+        guard let client = CoachClient.fromBundle() else { return false }
+        do {
+            try await client.teach(text)
+            await refresh()
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
+    }
+
     func refresh() async {
         guard let client = CoachClient.fromBundle() else { return }
         do {
@@ -19,6 +31,8 @@ final class CoachNotesModel: ObservableObject {
 
 struct CoachNotesSection: View {
     @ObservedObject var model: CoachNotesModel
+    @State private var lesson = ""
+    @State private var sending = false
 
     var body: some View {
         Section("コーチと一緒に育つ") {
@@ -30,6 +44,20 @@ struct CoachNotesSection: View {
                 DisclosureGroup("あなたの正解") { Text(Self.body(n.rules)).font(.callout) }
                 DisclosureGroup("コーチが学んだこと") { Text(Self.body(n.reading)).font(.callout) }
                 DisclosureGroup("杯をまたいだ癖") { Text(Self.body(n.tendencies)).font(.callout) }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("コーチに教える").font(.caption).foregroundStyle(.secondary)
+                    TextField("例: 27〜32秒は追加の泡入れだった", text: $lesson, axis: .vertical)
+                        .lineLimit(1...4)
+                    Button(sending ? "送信中…" : "教える") {
+                        let text = lesson
+                        sending = true
+                        Task {
+                            if await model.teach(text) { lesson = "" }
+                            sending = false
+                        }
+                    }
+                    .disabled(lesson.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending)
+                }
             } else if let e = model.error {
                 Text(e).font(.caption).foregroundStyle(.red)
             } else {
