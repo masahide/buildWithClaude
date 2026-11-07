@@ -10,7 +10,7 @@
 
 ## 構成
 
-iOS ネイティブアプリ＋薄いサーバー＋Claude Managed Agents。生の音声は端末から出さず、端末で計算した音響特徴量（スカラー値と相対値の包絡）とピッチャーの残りの写真だけを送る。詳細は [docs/project/architecture.md](docs/project/architecture.md)。
+iOS ネイティブアプリ＋薄いサーバー＋Claude Managed Agents。生の音声は家の外に出さない。iPhone はスチーム区間の前後だけの音を自宅の Mac のサーバーに送り、サーバーで何度でも測り直せるようにする。Claude には音そのものではなく、音から作った数値とスペクトログラムの画像、ピッチャーの残りの写真を渡す（[decisions.md D21](docs/project/decisions.md)）。詳細は [docs/project/architecture.md](docs/project/architecture.md)。
 
 ## セットアップ
 
