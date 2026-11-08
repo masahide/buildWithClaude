@@ -20,8 +20,13 @@ const BG = "#121214";
 const FONT = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif';
 
 type Visual =
-  | { kind: "img"; src: string; from: number; to: number; reveal?: boolean; zoom?: boolean }
-  | { kind: "clip"; src: string; from: number; to: number; rate?: number };
+  | { kind: "img"; src: string; from: number; to: number; reveal?: boolean; zoom?: boolean; label?: string }
+  | { kind: "clip"; src: string; from: number; to: number; rate?: number; label?: string };
+
+// 画面の隅のラベル（何の画面かを示す）
+const APP = "iPhone アプリ";
+const PIC = "音の絵（自宅の Mac が描く）";
+const COACH = "Claude のコーチ";
 
 type Scene = {
   start: number;
@@ -31,21 +36,23 @@ type Scene = {
   voiceSec: number; // 語りの長さ（字幕の割り振りに使う）
   lines: string[]; // 字幕（表記は demo.md）
   visuals: Visual[];
-  // 語りを文ごとに切って映像に合わせて置くとき（③）。from/to は音声の中の秒（無音で区切った位置）
-  parts?: { at: number; from: number; to: number; line: string }[];
+  // 語りを何本かに分けて映像に合わせて置くとき（③）
+  parts?: { at: number; voice: string; sec: number; lines: string[] }[];
 };
 
 const SCENES: Scene[] = [
   {
-    start: 0, end: 12, voice: "scene1.mp3", voiceAt: 3.5, voiceSec: 7.47,
-    lines: ["この音の違い、聞こえますか。", "ラテアートの出来は、この数十秒のスチームで、ほぼ決まります。"],
+    // 私の困りごと
+    start: 0, end: 15, voice: "scene1.mp3", voiceAt: 1.0, voiceSec: 6.61,
+    lines: ["家でラテアートを練習しています。", "でも、一人だと、失敗した理由が分かりません。"],
     visuals: [
-      { kind: "img", src: "1108_cup2.png", from: 0, to: 8.5, reveal: true },
-      { kind: "img", src: "c1_title.png", from: 8.5, to: 12 },
+      { kind: "clip", src: "wide_kitchen.mp4", from: 0, to: 10 },
+      { kind: "img", src: "c1_title.png", from: 10, to: 15 },
     ],
   },
   {
-    start: 12, end: 35, voice: "scene2.mp3", voiceAt: 0.5, voiceSec: 19.57,
+    // なぜ音か
+    start: 15, end: 36, voice: "scene2.mp3", voiceAt: 0.5, voiceSec: 19.57,
     lines: [
       "形にはなる。でも、輪郭がぼやける。",
       "原因はたいてい、注ぐ前のスチームにあります。",
@@ -55,59 +62,57 @@ const SCENES: Scene[] = [
       "一緒に育つコーチを作りました。",
     ],
     visuals: [
-      { kind: "img", src: "IMG_1852.jpg", from: 0, to: 10, zoom: true },
-      { kind: "img", src: "IMG_1846.jpg", from: 10, to: 23, zoom: true },
+      { kind: "img", src: "IMG_1852.jpg", from: 0, to: 7, zoom: true },
+      { kind: "img", src: "IMG_1846.jpg", from: 7, to: 14, zoom: true },
+      { kind: "img", src: "1108_cup2.png", from: 14, to: 21, reveal: true, label: PIC },
     ],
   },
   {
-    start: 35, end: 55, voice: "scene3.mp3", voiceAt: 0.5, voiceSec: 9.33,
-    lines: ["開始を押して、台所に置くだけ。", "スチームが終わると知らせが来ます。", "注ぎ終わったら、ピッチャーの残りを1枚撮ります。"],
+    // 使ってみる（今朝の1回目）
+    start: 36, end: 76, voice: "", voiceAt: 0, voiceSec: 0, lines: [],
     parts: [
-      { at: 0.5, from: 0, to: 2.6, line: "開始を押して、台所に置くだけ。" },
-      { at: 8.3, from: 3.0, to: 5.35, line: "スチームが終わると知らせが来ます。" },
-      { at: 12.0, from: 5.7, to: 9.33, line: "注ぎ終わったら、ピッチャーの残りを1枚撮ります。" },
+      { at: 0.5, voice: "scene3a.mp3", sec: 4.52, lines: ["今朝の1回目です。", "開始を押して、台所に置くだけ。"] },
+      { at: 10.5, voice: "scene3b.mp3", sec: 7.08, lines: ["スチームが終わると、知らせが来ます。", "注ぎ終わったら、ピッチャーの残りを1枚撮って送ります。"] },
+      {
+        at: 23.5, voice: "scene3c.mp3", sec: 14.92,
+        lines: [
+          "1、2分で、Claude のコーチから返事が届きます。",
+          "原因の工程を1つ。",
+          "次の1回で直す点を1つ、耳と手でできる言葉で。",
+          "そして、次に淹れたときに起きるはずの変化を1つ。",
+        ],
+      },
     ],
     visuals: [
-      { kind: "clip", src: "sr_start.mp4", from: 0, to: 3 },
-      { kind: "clip", src: "wide_steam.mp4", from: 3, to: 8 },
-      { kind: "clip", src: "sr_done.mp4", from: 8, to: 11.5 },
-      { kind: "clip", src: "wide_pour.mp4", from: 11.5, to: 15.5 },
-      { kind: "clip", src: "sr_photo.mp4", from: 15.5, to: 20, rate: 1.8 },
+      { kind: "clip", src: "sr_start.mp4", from: 0, to: 4, label: APP },
+      { kind: "clip", src: "wide_steam.mp4", from: 4, to: 10 },
+      { kind: "clip", src: "sr_done.mp4", from: 10, to: 14, label: APP },
+      { kind: "clip", src: "wide_pour.mp4", from: 14, to: 18 },
+      { kind: "clip", src: "sr_photo.mp4", from: 18, to: 23, rate: 1.8, label: APP },
+      { kind: "img", src: "s4_cup1_diagnosis.png", from: 23, to: 31, label: APP + " ／ " + COACH + "の返事" },
+      { kind: "img", src: "c4_diagnosis.png", from: 31, to: 40, label: COACH },
     ],
   },
   {
-    start: 55, end: 85, voice: "scene4.mp3", voiceAt: 0.5, voiceSec: 25.63,
+    // 2回目で確かめる
+    start: 76, end: 101, voice: "scene4.mp3", voiceAt: 0.5, voiceSec: 19.72,
     lines: [
-      "コーチは、音の形と写真を見て、3つだけ返します。",
-      "原因の工程を1つ。",
-      "次の1回で直す点を1つ、耳と手でできる言葉で。",
-      "そして、次に淹れたときに起きるはずの変化を1つ。",
-      "採点役の AI が、言いすぎた診断を差し戻します。",
-      "今朝の1回目は、渦の途中で、うっかり空気を入れていました。",
-    ],
-    visuals: [
-      { kind: "img", src: "s4_cup1_diagnosis.png", from: 0, to: 9 },
-      { kind: "img", src: "c4_diagnosis.png", from: 9, to: 19 },
-      { kind: "img", src: "1108_cup1.png", from: 19, to: 30 },
-    ],
-  },
-  {
-    start: 85, end: 108, voice: "scene5.mp3", voiceAt: 0.5, voiceSec: 17.55,
-    lines: [
+      "今朝は、渦の途中で、うっかり空気を入れていました。",
       "続けて2回目。",
-      "言われたとおりにすると、1回目で空気が入っていた音が消え、",
+      "言われたとおりにすると、空気が入っていた音が消え、",
       "泡の膜も薄くなりました。",
       "コーチの判定は「ほぼ当たり」。",
-      "ただし、続けて淹れたので、直しの効果とは言い切れない、",
-      "とも書いてきます。",
+      "ただし、続けて淹れたので、言い切れない、とも書いてきます。",
     ],
     visuals: [
-      { kind: "img", src: "c5_compare.png", from: 0, to: 13 },
-      { kind: "img", src: "c5_verdict.png", from: 13, to: 23 },
+      { kind: "img", src: "1108_cup1.png", from: 0, to: 6, label: PIC },
+      { kind: "img", src: "c5_compare.png", from: 6, to: 17 },
+      { kind: "img", src: "c5_verdict.png", from: 17, to: 25, label: COACH },
     ],
   },
   {
-    start: 108, end: 145, voice: "scene6.mp3", voiceAt: 0.5, voiceSec: 26.2,
+    // 山場: AI が自分の誤りに気づく
+    start: 101, end: 135, voice: "scene5.mp3", voiceAt: 0.5, voiceSec: 26.2,
     lines: [
       "最初は、AI の耳も初心者でした。",
       "ある日、コーチが自分から書いてきました。",
@@ -119,32 +124,39 @@ const SCENES: Scene[] = [
       "こうして一緒に育っていきます。",
     ],
     visuals: [
-      { kind: "img", src: "1107_v1.png", from: 0, to: 9 },
-      { kind: "img", src: "c6a_doubt.png", from: 9, to: 19 },
-      { kind: "img", src: "1107_v2.png", from: 19, to: 29 },
-      { kind: "img", src: "c6b_v2.png", from: 29, to: 37 },
+      { kind: "img", src: "1107_v1.png", from: 0, to: 8, label: PIC },
+      { kind: "img", src: "c6a_doubt.png", from: 8, to: 17, label: COACH },
+      { kind: "img", src: "1107_v2.png", from: 17, to: 26, label: PIC },
+      { kind: "img", src: "c6b_v2.png", from: 26, to: 34, label: APP + "の判定" },
     ],
   },
   {
-    start: 145, end: 166, voice: "scene7.mp3", voiceAt: 0.5, voiceSec: 14.68,
+    // 仕組みと Claude の使い方
+    start: 135, end: 162, voice: "scene6.mp3", voiceAt: 0.5, voiceSec: 22.83,
     lines: [
-      "毎晩、コーチがその日の練習を振り返ります。",
-      "当たった直し方は「あなたの正解」に。",
-      "私が教えたことは、コーチの読みより優先して覚えます。",
-      "そして、翌朝のテーマを1つ決めます。",
+      "仕組みです。",
+      "iPhone アプリが音を聞き、自宅の Mac に送ります。",
+      "音は、家から出しません。",
+      "Claude には、音の数値と絵、写真だけを渡します。",
+      "毎回の診断では、採点役の AI が、言いすぎた返事を差し戻します。",
+      "毎晩の振り返りで、教わったことを記憶に書き足していきます。",
     ],
     visuals: [
-      { kind: "img", src: "s7_theme.png", from: 0, to: 7 },
-      { kind: "img", src: "s7_your_answer.png", from: 7, to: 14 },
-      { kind: "img", src: "s7_taught_by_user.png", from: 14, to: 21 },
+      { kind: "img", src: "c_arch.png", from: 0, to: 16 },
+      { kind: "img", src: "s7_taught_by_user.png", from: 16, to: 27, label: "コーチの記憶（" + APP + "で見られる）" },
     ],
   },
   {
-    start: 166, end: 179, voice: "scene8.mp3", voiceAt: 0.5, voiceSec: 9.25,
-    lines: ["渦の回転方向は、音では分かりません。", "だから、次に淹れたときの結果で確かめます。", "音は、家から出しません。"],
+    // 締め
+    start: 162, end: 179, voice: "scene7.mp3", voiceAt: 0.5, voiceSec: 11.0,
+    lines: [
+      "ラテアートの正解は、人によって違います。",
+      "だから、あなたの音から、一緒に正解を見つけていく。",
+      "AI も、私も、初心者からのスタートです。",
+    ],
     visuals: [
-      { kind: "clip", src: "wide_kitchen.mp4", from: 0, to: 8 },
-      { kind: "img", src: "c8_privacy.png", from: 8, to: 13 },
+      { kind: "img", src: "IMG_1853.jpg", from: 0, to: 11.5, zoom: true },
+      { kind: "img", src: "c_end.png", from: 11.5, to: 17 },
     ],
   },
 ];
@@ -182,6 +194,24 @@ const Still: React.FC<{ v: Extract<Visual, { kind: "img" }>; dur: number }> = ({
 const Clip: React.FC<{ v: Extract<Visual, { kind: "clip" }> }> = ({ v }) => (
   <AbsoluteFill style={{ backgroundColor: BG, alignItems: "center", justifyContent: "center" }}>
     <OffthreadVideo src={staticFile(`clips/${v.src}`)} muted playbackRate={v.rate ?? 1} style={{ height: "100%" }} />
+  </AbsoluteFill>
+);
+
+const Label: React.FC<{ text: string }> = ({ text }) => (
+  <AbsoluteFill style={{ alignItems: "flex-start", justifyContent: "flex-start", padding: 28 }}>
+    <div
+      style={{
+        fontFamily: FONT,
+        fontSize: 30,
+        fontWeight: 600,
+        color: "white",
+        background: "rgba(10,132,255,0.85)",
+        padding: "8px 18px",
+        borderRadius: 10,
+      }}
+    >
+      {text}
+    </div>
   </AbsoluteFill>
 );
 
@@ -224,7 +254,7 @@ export const Demo: React.FC = () => {
       <Sequence from={0} durationInFrames={s(8)}>
         <Audio
           src={staticFile("steam.m4a")}
-          volume={(f) => interpolate(f, [0, 10, s(3), s(8)], [0, 1, 0.9, 0], { extrapolateRight: "clamp" })}
+          volume={(f) => interpolate(f, [0, 10, s(1), s(1.5), s(7), s(8)], [0, 1, 1, 0.3, 0.3, 0], { extrapolateRight: "clamp" })}
         />
       </Sequence>
       {SCENES.map((sc, i) => (
@@ -233,20 +263,23 @@ export const Demo: React.FC = () => {
             const dur = s(v.to - v.from);
             return (
               <Sequence key={j} from={s(v.from)} durationInFrames={dur}>
-                <Fade dur={dur}>{v.kind === "img" ? <Still v={v} dur={dur} /> : <Clip v={v} />}</Fade>
+                <Fade dur={dur}>
+                  {v.kind === "img" ? <Still v={v} dur={dur} /> : <Clip v={v} />}
+                  {v.label ? <Label text={v.label} /> : null}
+                </Fade>
               </Sequence>
             );
           })}
           {sc.parts ? (
             sc.parts.map((p, k) => (
-              <Sequence key={k} from={s(p.at)} durationInFrames={s(p.to - p.from)}>
-                <Audio src={staticFile(`voice/${sc.voice}`)} trimBefore={s(p.from)} durationInFrames={s(p.to - p.from)} />
-                <Subtitles lines={[p.line]} sec={p.to - p.from} />
+              <Sequence key={k} from={s(p.at)} durationInFrames={s(p.sec + 0.3)}>
+                <Audio src={staticFile(`voice3/${p.voice}`)} />
+                <Subtitles lines={p.lines} sec={p.sec} />
               </Sequence>
             ))
           ) : (
             <Sequence from={s(sc.voiceAt)}>
-              <Audio src={staticFile(`voice/${sc.voice}`)} />
+              <Audio src={staticFile(`voice3/${sc.voice}`)} />
               <Subtitles lines={sc.lines} sec={sc.voiceSec} />
             </Sequence>
           )}
