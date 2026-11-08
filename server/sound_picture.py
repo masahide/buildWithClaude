@@ -45,7 +45,10 @@ def spectrogram(audio: bytes, hop_sec: float = 0.1, n_fft: int = 2048):
 
 
 def draw(envelope: list[list[float]], marks: Optional[dict] = None, title: str = "",
-         audio: Optional[bytes] = None, audio_start_sec: float = 0.0) -> Optional[bytes]:
+         audio: Optional[bytes] = None, audio_start_sec: float = 0.0,
+         origin_sec: Optional[float] = None, span: Optional[tuple[float, float]] = None) -> Optional[bytes]:
+    """origin_sec: 横軸の 0 にする位置（包絡の先頭からの秒）。span: 描く範囲（包絡の先頭からの秒）。
+    どちらも省略すると、判定の始まりを 0 にし、始まりの5秒前から止めた5秒後まで描く。2つの判定を同じ軸で並べるときに使う"""
     """PNG のバイト列を返す。スチーム区間が見つからなければ None"""
     if not envelope:
         return None
@@ -61,6 +64,10 @@ def draw(envelope: list[list[float]], marks: Optional[dict] = None, title: str =
         s0, s1 = loud[0] * 0.1, loud[-1] * 0.1
         marks = None
     lo, hi = max(0.0, s0 - 5), min(t[-1], s1 + 5)
+    if span:
+        lo, hi = max(0.0, span[0]), min(t[-1], span[1])
+    if origin_sec is not None:
+        s0 = origin_sec
     sel = (t >= lo) & (t <= hi)
     x = t[sel] - s0  # 蒸気を出してからの秒
 
@@ -77,6 +84,9 @@ def draw(envelope: list[list[float]], marks: Optional[dict] = None, title: str =
         st, sf, sdb = spec
         keep = (sf >= 50) & (sf <= 8000)
         sx = st + audio_start_sec - s0  # 音の先頭は包絡の先頭から audio_start_sec 秒後
+        # 帯域の線と同じ範囲（始まりの5秒前〜止めた5秒後）だけ描く。範囲がずれていると読み手が混乱する（11-08 にコーチが指摘）
+        win = (sx >= lo - s0) & (sx <= hi - s0)
+        sx, sdb = sx[win], sdb[win]
         axes[0].pcolormesh(sx, sf[keep], sdb[:, keep].T, shading="auto", cmap="magma", vmin=-5, vmax=35)
         axes[0].set_ylabel("周波数 (Hz)")
         axes[0].set_title("スペクトログラム（背景音比 dB、0.1 秒刻み）", fontsize=11)
@@ -97,9 +107,10 @@ def draw(envelope: list[list[float]], marks: Optional[dict] = None, title: str =
     ax[1].set_ylabel("音量の揺れ")
     ax[1].set_xlabel("蒸気を出してからの秒")
     end = max(75.0, (hi - s0))
+    start = min(-5.0, 5 * np.floor((lo - s0) / 5))
     for a in axes:
-        a.set_xlim(-5, end)
-        a.set_xticks(np.arange(-5, end + 0.1, 5))
+        a.set_xlim(start, end)
+        a.set_xticks(np.arange(start, end + 0.1, 5))
         a.grid(alpha=.35)
     if marks:
         for k, v in marks.items():
