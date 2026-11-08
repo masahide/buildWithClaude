@@ -74,7 +74,8 @@
   xcrun devicectl device install app --device <端末ID> <作業用ディレクトリ>/Build/Products/Debug-iphoneos/LatteCoach.app
   xcrun devicectl device process launch --terminate-existing --device <端末ID> <バンドル ID>
   ```
-- GitHub へのプッシュ: SSH の鍵はこの Mac に無く、本人の接続の鍵の転送で通っている。画面側のセッションでプッシュできないときは、本人に確かめる
+- GitHub へのプッシュ: SSH の鍵はこの Mac に無く、本人の接続の鍵の転送で通っている。画面側のセッションでは `git push https://github.com/masahide/buildWithClaude.git main` で、保存済みの認証を使ってプッシュできる（11-08 に確かめた）
+- 11-08 昼に、参加者限定の資料の要約（docs/hackathon/）を履歴から消して強制プッシュした。元の履歴の控えは `notes/private/backup/`
 - 夜の振り返りを手で回す: `curl -X POST "localhost:8000/review?day=YYYY-MM-DD"`（結果は `server/data/reviews/`、約 30 分）
 
 ## 提出後にやること（README の「次にやること」と同じ）
