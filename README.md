@@ -1,4 +1,4 @@
-# ラテアートAIコーチ
+# スチームコーチ
 
 **AI もユーザーも初心者から始まり、一緒に育つ、ミルクスチームのコーチ。**
 
@@ -155,7 +155,7 @@ open LatteCoach.xcodeproj
 
 このリポジトリは、本人と Claude Code の対話で作った。コードを書かせるだけでなく、次のことに使った。
 
-- **設計を言葉にして残す。** 決めたことと捨てたことを、日付と理由とともに [decisions.md](docs/project/decisions.md)（D1〜D22）に書かせた。本人の発言（「人によってやり方が違う」「情報を削っても後でよいことはない」）が、設計の転換点として記録されている
+- **設計を言葉にして残す。** 決めたことと捨てたことを、日付と理由とともに [decisions.md](docs/project/decisions.md)（D1〜D23）に書かせた。本人の発言（「人によってやり方が違う」「情報を削っても後でよいことはない」）が、設計の転換点として記録されている
 - **実際の音を一緒に見る。** ボイスメモをスペクトログラムにして Claude Code が読み、本人が耳で答える往復で判定を作り直した。作り物の音に合わせて実際の録音を悪くした変更は、その場で戻した（[log/2026-11-07.md](docs/log/2026-11-07.md)）
 - **仮説を実験で確かめる。** 「AI エージェントに音を解析させたら」「画像だけで判定させたら」「音を間引いて送ったら」を、それぞれ実験して数字で判断した（[docs/log/](docs/log/)）
 - **引き継ぎ。** 作業の区切りごとに [status.md](docs/project/status.md) を更新し、別のセッションや別の Claude が続きから始められるようにした
@@ -174,7 +174,7 @@ open LatteCoach.xcodeproj
 | --- | --- |
 | [docs/project/status.md](docs/project/status.md) | 現在の状態と次にやること（引き継ぎ用） |
 | [docs/project/timeline.md](docs/project/timeline.md) | 開発の経緯（日ごとに何が起きて何を変えたか） |
-| [docs/project/decisions.md](docs/project/decisions.md) | 設計判断の記録（D1〜D22）と未決事項 |
+| [docs/project/decisions.md](docs/project/decisions.md) | 設計判断の記録（D1〜D23）と未決事項 |
 | [docs/project/overview.md](docs/project/overview.md) | プロダクト概要、誰が何に困っているか、設計原則、工程の区分、ユーザー操作 |
 | [docs/project/architecture.md](docs/project/architecture.md) | 全体構成、iOS アプリ、サーバー、Managed Agents |
 | [docs/project/sound-picture.md](docs/project/sound-picture.md) | 音の絵（スペクトログラム）の設計 |

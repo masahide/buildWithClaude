@@ -1,7 +1,7 @@
 [project]
 name = "steam-coach-server"
 version = "0.1.0"
-description = "ラテアートAIコーチの薄いサーバー"
+description = "スチームコーチのサーバー"
 requires-python = ">=3.12"
 dependencies = [
     "anthropic",
