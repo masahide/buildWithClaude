@@ -159,5 +159,3 @@ open LatteCoach.xcodeproj
 | [docs/project/recording-protocol.md](docs/project/recording-protocol.md) | 検証データの記録手順 |
 | [docs/project/constraints.md](docs/project/constraints.md) | イベント上の制約とその解釈 |
 | [docs/log/](docs/log/) | 日々の観測と検証の記録 |
-| [docs/hackathon/participant-guide.md](docs/hackathon/participant-guide.md) | ハッカソン参加者ガイドの要約 |
-| [docs/hackathon/kickoff.md](docs/hackathon/kickoff.md) | キックオフの要約 |
