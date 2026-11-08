@@ -2,27 +2,38 @@
 
 作業を引き継ぐときに最初に読む。終わった項目は消し、結果は [docs/log/](../log/) に、判断は [decisions.md](decisions.md) に書く。1日の区切りに [timeline.md](timeline.md)（開発の経緯）にも1段落足す。
 
-最終更新: 2026-11-08 夕方（デモ動画を作り、YouTube に限定公開した。あとは本人がフォームから提出する）
+最終更新: 2026-11-08 17:00（Mac から Windows へ引き継ぐ。提出はまだ）
 
-## いちばん大事なこと
+## Windows で引き継いだら、まずやること
 
-- **提出期限は今日 2026-11-08 20:00 JST。** 18 時台に提出する
-- 残りは提出だけ。機能もドキュメントも足さない
-- 提出フォームの下書きは `notes/private/submission.md`（git 管理外）。概要は冒頭の1文を含めて500字以内に収めてある
+1. **フォームから提出する（20:00 締切、18 時台に）。** 回答の下書きは Mac の `notes/private/submission.md`（git 管理外なので Windows には無い。本人が Mac から持ってくる）
+   - プロジェクト名: スチームコーチ（D23）。テーマ: あなたにしかない深さを。
+   - 使った製品（複数選択）: Claude Code CLI、Claude Code Desktop、Claude API、Managed Agents
+   - 問題が起きた製品（1つ）: Claude Code CLI
+   - 審査員用リンク: なし
+2. 提出したら、この status.md を「提出済み」に書き換えてプッシュする。**提出したあとは、審査（11-09〜11-10）が終わるまでリポジトリと動画を変えない**（1次審査の間は提出物を変更できない）
+3. 提出のあとで: ElevenLabs の Starter プラン（11-08 契約、翌月から月 6 ドル）を解約し、API キーを無効にする
 
-## 提出物
+## 提出物（すべて準備済み）
 
 | 提出物 | 状態 |
 | --- | --- |
 | 公開 GitHub リポジトリ | https://github.com/masahide/buildWithClaude （公開、MIT ライセンス。参加者限定の資料の要約は履歴から消した） |
-| デモ動画 | https://youtu.be/DSAeuG_FyZk （限定公開、2:59）。台本は [demo.md](demo.md)、動画のコードは [demo-video/](../../demo-video/)（Remotion）、語りは ElevenLabs の声（[scripts/demo/narration.py](../../scripts/demo/narration.py)） |
-| プロジェクト概要とフォームの回答 | 下書き済み（`notes/private/submission.md`） |
+| デモ動画 | https://youtu.be/DSAeuG_FyZk （限定公開、2:59。ログインなしで見られることを確かめた） |
+| フォームの回答 | 下書き済み（Mac の `notes/private/submission.md`、概要は 479 字） |
 
-## デモ動画の作り直し方
+## Windows からは触れないもの（Mac にだけある）
 
-- 素材は `notes/private/demo/`、動画用にまとめたものは `demo-video/public/`（どちらも git 管理外）
+- サーバー（自宅の Mac で動いている）、杯の記録と音声（`server/data/`）、API キー（`~/.config/latte-coach/env`）
+- 非公開のメモ（`notes/private/`）。提出フォームの下書き、デモの素材、ElevenLabs の声
+- 書き出した動画（`demo-video/out/demo.mp4`）と動画用の素材（`demo-video/public/`）。動画を作り直すときは Mac で行う
+- iOS アプリのビルド（Xcode）
+
+## デモ動画の作り直し方（Mac で）
+
+- 台本は [demo.md](demo.md)、動画のコードは [demo-video/](../../demo-video/)（Remotion）、語りは ElevenLabs の声（[scripts/demo/narration.py](../../scripts/demo/narration.py)）
 - `cd demo-video && npx remotion render src/index.ts Demo out/demo.mp4`（約3分）。台本の秒数は `src/Demo.tsx` の `SCENES`
-- 語りを作り直す: `set -a; . ~/.config/latte-coach/env; set +a; uv run --with requests python scripts/demo/narration.py notes/private/demo/voice/v3 <場面>`。読み間違える言葉は仮名に開く
+- 語りを作り直す: `set -a; . ~/.config/latte-coach/env; set +a; uv run --with requests python scripts/demo/narration.py notes/private/demo/voice/v3 <場面>`。読み間違える言葉は仮名に開く（Eleven v4 は、漢字と伸ばし棒のあるカタカナ語を間違えやすい）
 
 ## できていること（2026-11-08 昼）
 
