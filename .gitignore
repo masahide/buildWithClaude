@@ -24,3 +24,8 @@ ios/Config/Local.xcconfig
 server/data/
 server/.venv/
 __pycache__/
+
+# デモ動画（素材と書き出しは非公開。コードだけ管理する）
+demo-video/node_modules/
+demo-video/public
+demo-video/out/
