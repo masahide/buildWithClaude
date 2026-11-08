@@ -6,7 +6,7 @@
 
 ## Windows で引き継いだら、まずやること
 
-1. **フォームから提出する（20:00 締切、18 時台に）。** 回答の下書きは Mac の `notes/private/submission.md`（git 管理外なので Windows には無い。本人が Mac から持ってくる）
+1. **フォームから提出する（20:00 締切、18 時台に）。** 回答は [submission.md](submission.md) に全項目ある。項目ごとにそのまま貼る
    - プロジェクト名: スチームコーチ（D23）。テーマ: あなたにしかない深さを。
    - 使った製品（複数選択）: Claude Code CLI、Claude Code Desktop、Claude API、Managed Agents
    - 問題が起きた製品（1つ）: Claude Code CLI
@@ -20,12 +20,12 @@
 | --- | --- |
 | 公開 GitHub リポジトリ | https://github.com/masahide/buildWithClaude （公開、MIT ライセンス。参加者限定の資料の要約は履歴から消した） |
 | デモ動画 | https://youtu.be/DSAeuG_FyZk （限定公開、2:59。ログインなしで見られることを確かめた） |
-| フォームの回答 | 下書き済み（Mac の `notes/private/submission.md`、概要は 479 字） |
+| フォームの回答 | [submission.md](submission.md)（概要は 479 字） |
 
 ## Windows からは触れないもの（Mac にだけある）
 
 - サーバー（自宅の Mac で動いている）、杯の記録と音声（`server/data/`）、API キー（`~/.config/latte-coach/env`）
-- 非公開のメモ（`notes/private/`）。提出フォームの下書き、デモの素材、ElevenLabs の声
+- 非公開のメモ（`notes/private/`）。デモの素材、ElevenLabs の声
 - 書き出した動画（`demo-video/out/demo.mp4`）と動画用の素材（`demo-video/public/`）。動画を作り直すときは Mac で行う
 - iOS アプリのビルド（Xcode）
 
