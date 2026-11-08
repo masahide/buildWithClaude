@@ -1,6 +1,6 @@
 import Foundation
 
-/// 薄いサーバーとのやりとり。サーバー側（POST /cups, GET /cups/{id}）は未実装で、この形に合わせて作る。
+/// 自宅のサーバー（server/app.py）とのやりとり。
 ///
 /// POST /cups  multipart/form-data
 ///   meta  : application/json  {"started_at", "ended_at", "features", "self_rating"}

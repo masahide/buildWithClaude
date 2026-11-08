@@ -1,6 +1,6 @@
 """コーチ本体の呼び出し。1杯ぶんの特徴量と写真から、原因の工程1つ・直す点1つ・予測1つを返す。
 
-方式は環境変数 COACH_BACKEND で切り替える（どちらにするかは待ち時間の計測で決める。decisions.md 未決）。
+方式は環境変数 COACH_BACKEND で切り替える。待ち時間を測って managed を既定にした（decisions.md D13）。
   managed  : Managed Agents のセッション＋Outcomes（採点役が差し戻す。既定。decisions.md D13）
   messages : Messages API を1回呼ぶ（待ち時間が長すぎるときの戻し先）
   fake     : API を呼ばず固定の診断を返す（アプリとの通し確認用）

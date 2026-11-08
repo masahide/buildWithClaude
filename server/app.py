@@ -3,7 +3,7 @@
   POST /cups       multipart: meta(JSON) + photo(JPEG) → 202 {"cup_id"}
   GET  /cups/{id}  → {"status": "diagnosing"|"done"|"failed", "diagnosis"?, "error"?}
 
-杯の記録は server/data/cups/ に置く（git 管理外）。音声は受け取らない。
+杯の記録は server/data/cups/ に置く（git 管理外）。練習の音も受け取って保存する（家の外には出さない。decisions.md D21）。
 起動: cd server && uv run uvicorn app:app --host 0.0.0.0 --port 8000
 """
 
