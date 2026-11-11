@@ -21,7 +21,7 @@
 | 提出物 | 状態 |
 | --- | --- |
 | 公開 GitHub リポジトリ | https://github.com/masahide/buildWithClaude （公開、MIT ライセンス。参加者限定の資料の要約は履歴から消した） |
-| デモ動画 | https://youtu.be/DSAeuG_FyZk （限定公開、2:59。ログインなしで見られることを確かめた） |
+| デモ動画 | ハッカソン終了後（11-11）に YouTube で非公開にした。リンクはリポジトリから外した（2:59） |
 | フォームの回答 | [submission.md](submission.md)（概要は 479 字） |
 
 ## Windows からは触れないもの（Mac にだけある）

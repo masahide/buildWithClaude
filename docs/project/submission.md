@@ -23,7 +23,7 @@ https://github.com/masahide/buildWithClaude
 
 ## デモ動画
 
-https://youtu.be/DSAeuG_FyZk
+（提出時は YouTube の限定公開の URL を書いた。ハッカソン終了後の 11-11 に非公開にしたので、リンクは外した）
 
 ## 使用した Claude の製品・機能
 
